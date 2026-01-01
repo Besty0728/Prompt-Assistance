@@ -57,12 +57,26 @@ npm run dev
 3. 框架预设选择 **Vite**。
 4. 构建命令：`npm run build`，输出目录：`dist`。
 
-### Cloudflare Pages / Workers
+### Cloudflare Pages
+
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
+
+1. 在 [Cloudflare 控制台](https://dash.cloudflare.com/)，进入 **Workers & Pages** → **创建** → **Pages**。
+2. 连接您的 GitHub 仓库。
+3. **构建设置**:
+    - **框架预设**: `None`（或 `Vite`，如果可用）
+    - **构建命令**: `npm run build`
+    - **构建输出目录**: `dist`
+4. 点击 **保存并部署**。
+
+### Cloudflare Workers
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
 
-1. **Pages**: 在控制台创建新项目，关联 GitHub，构建选项选 `Vite`，输出目录 `dist`。
-2. **Workers**: 运行 `npm run build` 后，使用 `wrangler pages deploy dist` 部署。
+1. 安装 Wrangler CLI：`npm install -g wrangler`
+2. 登录 Cloudflare：`wrangler login`
+3. 构建项目：`npm run build`
+4. 部署：`wrangler pages deploy dist --project-name=prompt-assistance`
 
 ### EdgeOne Pages (腾讯云)
 

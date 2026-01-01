@@ -57,12 +57,26 @@ This project is a 100% static SPA application and can be easily deployed on any 
 3. Select **Vite** as the framework preset.
 4. Build Command: `npm run build`, Output Directory: `dist`.
 
-### Cloudflare Pages / Workers
+### Cloudflare Pages
+
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
+
+1. In the [Cloudflare Dashboard](https://dash.cloudflare.com/), go to **Workers & Pages** → **Create** → **Pages**.
+2. Connect your GitHub repository.
+3. **Build Settings**:
+    - **Framework preset**: `None` (or `Vite` if available)
+    - **Build command**: `npm run build`
+    - **Build output directory**: `dist`
+4. Click **Save and Deploy**.
+
+### Cloudflare Workers
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
 
-1. **Pages**: Create a new project in the console, link GitHub, select `Vite` for build options, and set `dist` as the output directory.
-2. **Workers**: After running `npm run build`, deploy using `wrangler pages deploy dist`.
+1. Install Wrangler CLI: `npm install -g wrangler`
+2. Login to Cloudflare: `wrangler login`
+3. Build the project: `npm run build`
+4. Deploy: `wrangler pages deploy dist --project-name=prompt-assistance`
 
 ### EdgeOne Pages (Tencent Cloud)
 
