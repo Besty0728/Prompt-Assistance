@@ -1,6 +1,7 @@
 <script lang="ts">
-    import { appState } from "../lib/state.svelte";
+    import { appState, type AppSettings } from "../lib/state.svelte";
     import { translations } from "../lib/i18n";
+    import { deepClone } from "../lib/utils";
     import {
         X,
         Eye,
@@ -24,8 +25,11 @@
 
     let { onClose } = $props();
 
-    // Create temporary state for editing
-    let settings = $state({ ...appState.settings });
+    // Create temporary state for editing using TRUE DEEP CLONE
+    // This prevents nested object mutations from leaking to global state before save
+    let settings = $state<AppSettings>(
+        deepClone($state.snapshot(appState.settings)),
+    );
 
     let showKey = $state<Record<string, boolean>>({});
     let isFetching = $state(false);
@@ -255,21 +259,13 @@
             }
 
             if (newModels.length > 0) {
-                // Update persistent state
+                // Update local settings only (will persist on save)
                 if (provider === "openai")
                     settings.availableModels.openai = newModels;
                 if (provider === "gemini")
                     settings.availableModels.gemini = newModels;
                 if (provider === "custom")
                     settings.availableModels.custom = newModels;
-
-                // Update persistent appState as well
-                if (provider === "openai")
-                    appState.settings.availableModels.openai = newModels;
-                if (provider === "gemini")
-                    appState.settings.availableModels.gemini = newModels;
-                if (provider === "custom")
-                    appState.settings.availableModels.custom = newModels;
 
                 showModelDropdown = true;
             }
@@ -296,14 +292,14 @@
             reader.onload = (e) => {
                 const result = e.target?.result as string;
                 settings.customIcon = result;
-                appState.settings.customIcon = result;
             };
             reader.readAsDataURL(input.files[0]);
         }
     }
 
     function save() {
-        appState.settings = { ...settings };
+        // Atomic update: replace entire appState.settings with our local copy
+        appState.settings = deepClone(settings);
         onClose();
     }
 
@@ -371,9 +367,10 @@
             <!-- Theme Toggle -->
             <button
                 onclick={() => {
-                    const next = settings.theme === "dark" ? "light" : "dark";
-                    settings.theme = next;
-                    appState.settings.theme = next;
+                    const newTheme =
+                        appState.settings.theme === "dark" ? "light" : "dark";
+                    appState.settings.theme = newTheme;
+                    settings.theme = newTheme;
                 }}
                 class="group relative w-12 h-12 flex items-center justify-center rounded-xl bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border-2 border-neutral-200 dark:border-white/10 shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
             >
@@ -394,9 +391,10 @@
             <!-- Language Toggle -->
             <button
                 onclick={() => {
-                    const next = settings.language === "zh" ? "en" : "zh";
-                    settings.language = next;
-                    appState.settings.language = next;
+                    const newLang =
+                        appState.settings.language === "zh" ? "en" : "zh";
+                    appState.settings.language = newLang;
+                    settings.language = newLang;
                 }}
                 class="group relative w-12 h-12 flex items-center justify-center rounded-xl bg-white/50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border-2 border-neutral-200 dark:border-white/10 shadow-sm transition-all duration-300 hover:scale-105 active:scale-95"
             >
@@ -460,8 +458,6 @@
                     <button
                         onclick={() => {
                             settings.provider = p.id as any;
-                            // Update appState immediately for real-time preview if needed
-                            appState.settings.provider = p.id as any;
                         }}
                         class="group relative flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border transition-all duration-300 {settings.provider ===
                         p.id
@@ -1530,7 +1526,7 @@
             class="group w-full flex items-center justify-center gap-3 bg-neutral-900 dark:bg-white text-white dark:text-black font-black py-4 rounded-2xl hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl hover:shadow-2xl uppercase tracking-[0.2em] text-xs relative overflow-hidden"
         >
             <div
-                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"
+                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 pointer-events-none"
             ></div>
             <Save class="size-4" />
             {t.save}

@@ -3,6 +3,8 @@
     import { translations } from "../lib/i18n";
     import { PROMPTS, type ModelType } from "../lib/prompts";
     import { chatCompletion, type Message } from "../lib/llm";
+    import { estimateTokens } from "../lib/utils";
+    import ReferenceModal from "./ReferenceModal.svelte";
     import {
         Wand2,
         Copy,
@@ -31,10 +33,8 @@
     let error = $state<string | null>(null);
     let copied = $state(false);
 
-    // Custom Reference Modal State
+    // Reference Modal - now using external component
     let showRefModal = $state(false);
-    let newRefTitle = $state("");
-    let newRefContent = $state("");
 
     let t = $derived(translations[appState.settings.language]);
     let pillX = $state(50);
@@ -64,19 +64,6 @@
     function escapeXmlTags(text: string): string {
         // Wrap XML tags in code blocks so they render nicely
         return text.replace(/<(\/?[a-z_]+)>/gi, "`<$1>`");
-    }
-
-    function estimateTokens(text: string) {
-        if (!text) return 0;
-        // Simple heuristic: CJK chars = 1 token, Words = 1.3 tokens
-        const cjkRegex = /[\u4e00-\u9fa5\u3040-\u30ff\uac00-\ud7af]/g;
-        const cjkMatch = text.match(cjkRegex);
-        const cjkCount = cjkMatch ? cjkMatch.length : 0;
-
-        const nonCjkText = text.replace(cjkRegex, " ");
-        const wordCount = (nonCjkText.match(/[\w-]+/g) || []).length;
-
-        return Math.floor(cjkCount + wordCount * 1.3);
     }
 
     let renderedOutput = $derived(
@@ -466,8 +453,6 @@
                     <button
                         class="flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-neutral-300 dark:border-neutral-700 text-neutral-400 hover:text-purple-500 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all group"
                         onclick={() => {
-                            newRefTitle = "";
-                            newRefContent = "";
                             showRefModal = true;
                         }}
                     >
@@ -584,113 +569,8 @@
     </div>
 </div>
 
-<!-- Custom Reference Modal -->
-{#if showRefModal}
-    <div
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        onclick={(e) => {
-            if (e.target === e.currentTarget) showRefModal = false;
-        }}
-        onkeydown={(e) => {
-            if (e.key === "Escape") showRefModal = false;
-        }}
-        role="dialog"
-        aria-modal="true"
-        tabindex="-1"
-    >
-        <div
-            class="w-full max-w-2xl mx-4 bg-white/95 dark:bg-neutral-900/95 rounded-3xl shadow-2xl border border-black/10 dark:border-white/10 overflow-hidden"
-        >
-            <!-- Modal Header -->
-            <div
-                class="px-6 py-4 border-b border-black/5 dark:border-white/5 flex items-center justify-between"
-            >
-                <h3 class="text-lg font-bold text-neutral-800 dark:text-white">
-                    {t.addRef}
-                </h3>
-                <button
-                    class="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-white/10 text-neutral-400 hover:text-neutral-600 dark:hover:text-white transition-colors"
-                    onclick={() => (showRefModal = false)}
-                    aria-label="Close"
-                >
-                    <svg
-                        class="size-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path d="M18 6L6 18M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="p-6 space-y-4">
-                <div>
-                    <label
-                        class="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-2"
-                        >{t.refTitle}</label
-                    >
-                    <input
-                        type="text"
-                        bind:value={newRefTitle}
-                        placeholder="e.g., My Custom Guidelines"
-                        class="w-full px-4 py-3 bg-neutral-100/80 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-neutral-800 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all"
-                    />
-                </div>
-                <div>
-                    <label
-                        class="block text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-2"
-                        >{t.refContent}</label
-                    >
-                    <textarea
-                        bind:value={newRefContent}
-                        placeholder="Paste your reference content here (Markdown or plain text)..."
-                        rows="12"
-                        class="w-full px-4 py-3 bg-neutral-100/80 dark:bg-white/5 border border-black/5 dark:border-white/10 rounded-xl text-neutral-800 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all resize-none font-mono text-sm"
-                    ></textarea>
-                    <p
-                        class="mt-2 text-xs text-neutral-400 dark:text-neutral-500"
-                    >
-                        ~{estimateTokens(newRefContent)}
-                        {t.estTokens}
-                    </p>
-                </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div
-                class="px-6 py-4 border-t border-black/5 dark:border-white/5 flex justify-end gap-3"
-            >
-                <button
-                    class="px-5 py-2.5 text-sm font-medium text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-white/5 rounded-xl transition-colors"
-                    onclick={() => (showRefModal = false)}
-                >
-                    {appState.settings.language === "zh" ? "取消" : "Cancel"}
-                </button>
-                <button
-                    class="px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 rounded-xl shadow-lg shadow-purple-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={!newRefTitle.trim() || !newRefContent.trim()}
-                    onclick={() => {
-                        appState.settings.references.push({
-                            id: crypto.randomUUID(),
-                            title: newRefTitle.trim(),
-                            type: "text",
-                            content: newRefContent.trim(),
-                            targetId: appState.settings.targetModel,
-                            isCustom: true,
-                            enabled: true,
-                        });
-                        showRefModal = false;
-                    }}
-                >
-                    {appState.settings.language === "zh" ? "添加" : "Add"}
-                </button>
-            </div>
-        </div>
-    </div>
-{/if}
+<!-- Custom Reference Modal --><!-- Reference Modal Component -->
+<ReferenceModal bind:show={showRefModal} />
 
 <style>
     /* Glass Pill Styles */

@@ -24,13 +24,22 @@
         speed: number;
         depth: number; // For parallax hierarchy
         opacity: number;
+        color: string; // Dynamic color
     }
 
     let particles: Particle[] = [];
-    const PARTICLE_COUNT = 480; // Subtle density
+    const PARTICLE_COUNT = 480; // Back to Subtle
+
+    // Cosmic Palette
+    const colorsDark = ["#38bdf8", "#818cf8", "#c084fc", "#e879f9", "#22d3ee"]; // Sky, Indigo, Purple, Fuchsia, Cyan
+    // Macaroon Palette
+    const colorsLight = ["#ec4899", "#a855f7", "#0ea5e9", "#10b981", "#f97316"]; // Reduced opacity in logic
 
     function initParticles(width: number, height: number) {
         particles = [];
+        const isDark = appState.settings.theme === "dark";
+        const palette = isDark ? colorsDark : colorsLight;
+
         for (let i = 0; i < PARTICLE_COUNT; i++) {
             particles.push({
                 x: Math.random() * width,
@@ -41,7 +50,8 @@
                 length: 4 + Math.random() * 12,
                 speed: 0.005 + Math.random() * 0.015,
                 depth: 0.01 + Math.random() * 0.06,
-                opacity: 0.1 + Math.random() * 0.3,
+                opacity: 0.1 + Math.random() * 0.4, // Back to Subtle
+                color: palette[Math.floor(Math.random() * palette.length)],
             });
         }
     }
@@ -55,6 +65,11 @@
         if (ctx) ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
         initParticles(width, height);
     }
+
+    // React to theme changes for particle colors
+    $effect(() => {
+        if (canvas) initParticles(window.innerWidth, window.innerHeight);
+    });
 
     function draw() {
         if (!ctx || !canvas) return;
@@ -84,8 +99,8 @@
             ambientGrad.addColorStop(0.6, "rgba(147, 51, 234, 0.03)"); // Purple 600
             ambientGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
         } else {
-            ambientGrad.addColorStop(0, "rgba(124, 58, 237, 0.08)"); // Violet 600
-            ambientGrad.addColorStop(0.5, "rgba(14, 165, 233, 0.05)"); // Sky 500
+            ambientGrad.addColorStop(0, "rgba(244, 114, 182, 0.08)"); // Pink
+            ambientGrad.addColorStop(0.5, "rgba(192, 132, 252, 0.05)"); // Purple
             ambientGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
         }
         ctx.fillStyle = ambientGrad;
@@ -103,7 +118,7 @@
             coreGrad.addColorStop(0, "rgba(139, 92, 246, 0.15)"); // Purple 500
             coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
         } else {
-            coreGrad.addColorStop(0, "rgba(56, 189, 248, 0.1)"); // Sky 400
+            coreGrad.addColorStop(0, "rgba(34, 211, 238, 0.12)"); // Cyan (fresh center)
             coreGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
         }
         ctx.fillStyle = coreGrad;
@@ -132,13 +147,12 @@
             const drawX = p.x + offsetX + interactionX + Math.cos(p.angle) * 3;
             const drawY = p.y + offsetY + interactionY + Math.sin(p.angle) * 3;
 
-            // Subtler Stroke
+            // Use particle's own color
             ctx.lineWidth = 1.0;
-            ctx.strokeStyle = isDark
-                ? `rgba(255, 255, 255, ${p.opacity})`
-                : `rgba(0, 0, 0, ${p.opacity * 0.6})`;
+            ctx.globalAlpha = p.opacity;
+            ctx.strokeStyle = p.color;
 
-            // Subtler dynamic length
+            // Dynamic length
             const dynamicLength =
                 p.length * (1 + (interactionX !== 0 ? 0.5 : 0));
 
@@ -149,6 +163,7 @@
                 drawY + Math.sin(p.angle) * dynamicLength,
             );
             ctx.stroke();
+            ctx.globalAlpha = 1.0; // Reset
 
             // Screen Wrap
             if (p.x < -200) p.x = width + 200;
@@ -185,7 +200,7 @@
 </script>
 
 <div
-    class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none transition-colors duration-1000 bg-neutral-50 dark:bg-[#050505]"
+    class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none transition-colors duration-1000 bg-gradient-to-br from-rose-50/60 via-neutral-50 to-sky-50/60 dark:from-[#050505] dark:to-[#111116]"
 >
     <canvas bind:this={canvas} class="block w-full h-full"></canvas>
 
