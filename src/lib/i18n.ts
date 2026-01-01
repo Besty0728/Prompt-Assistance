@@ -1,6 +1,6 @@
 export const translations = {
     zh: {
-        title: 'Prompt Max',
+        title: 'Prompt-Assistance',
         settings: '设置',
         close: '关闭',
         save: '保存配置',
@@ -44,7 +44,7 @@ export const translations = {
         endpointSuffix: '端点后缀',
     },
     en: {
-        title: 'Prompt Max',
+        title: 'Prompt-Assistance',
         settings: 'Settings',
         close: 'Close',
         save: 'Save Configuration',

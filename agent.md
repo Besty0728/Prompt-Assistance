@@ -1,10 +1,10 @@
-# Prompt Max - AI Agent Context
+# Prompt-Assistance - AI Agent Context
 
 > 本文档帮助 AI Agent 快速理解项目架构与核心逻辑。
 
 ## Project Overview
 
-**Prompt Max** 是一个 Prompt 优化工具，使用 LLM 帮助用户将原始 Prompt 转化为结构化、高质量的 Prompt。
+**Prompt-Assistance** 是一个 Prompt 优化工具，使用 LLM 帮助用户将原始 Prompt 转化成结构化、高质量的 Prompt。
 
 **技术栈:**
 - **Framework:** Svelte 5 + Vite
