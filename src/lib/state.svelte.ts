@@ -21,6 +21,18 @@ export interface AppSettings {
         gemini: string;
         custom: string;
     };
+    endpointSuffixes: {
+        openai: string;
+        anthropic: string;
+        gemini: string;
+        custom: string;
+    };
+    useEndpointSuffixes: {
+        openai: boolean;
+        anthropic: boolean;
+        gemini: boolean;
+        custom: boolean;
+    };
     availableModels: {
         openai: { id: string; name: string }[];
         anthropic: { id: string; name: string }[];
@@ -52,6 +64,18 @@ class AppState {
             anthropic: 'claude-sonnet-4-5-20250929',
             gemini: 'gemini-3-flash-preview',
             custom: '',
+        },
+        endpointSuffixes: {
+            openai: '/chat/completions',
+            anthropic: '/messages',
+            gemini: '',
+            custom: '/chat/completions',
+        },
+        useEndpointSuffixes: {
+            openai: true,
+            anthropic: true,
+            gemini: true,
+            custom: true,
         },
         availableModels: {
             openai: [],

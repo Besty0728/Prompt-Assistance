@@ -99,6 +99,7 @@
     async function optimize() {
         if (!inputPrompt.trim()) return;
         const { key, baseUrl, model, provider } = activeProviderConfig;
+        const suffix = appState.settings.endpointSuffixes[provider];
 
         if (!key) {
             error = `${t.missingKey} (${provider})`;
@@ -127,6 +128,9 @@
                     baseURL: baseUrl,
                     model: model || "auto",
                     provider: provider,
+                    endpointSuffix: suffix,
+                    useEndpointSuffix:
+                        appState.settings.useEndpointSuffixes[provider],
                 },
                 (chunk) => {
                     outputPrompt += chunk;

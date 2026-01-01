@@ -30,6 +30,111 @@
     let showKey = $state<Record<string, boolean>>({});
     let isFetching = $state(false);
     let showModelDropdown = $state(false);
+    let showSuffixDropdown = $state(false);
+
+    let testResults = $state<
+        Record<
+            string,
+            {
+                status: "idle" | "testing" | "success" | "error";
+                message?: string;
+            }
+        >
+    >({
+        openai: { status: "idle" },
+        anthropic: { status: "idle" },
+        gemini: { status: "idle" },
+        custom: { status: "idle" },
+    });
+
+    async function testConnection(provider: keyof typeof testResults) {
+        testResults[provider] = { status: "testing" };
+        try {
+            if (provider === "openai" || provider === "custom") {
+                const baseUrl = (
+                    settings.baseUrls[provider] ||
+                    (provider === "openai" ? "https://api.openai.com/v1" : "")
+                ).replace(/\/$/, "");
+
+                let url = baseUrl;
+                if (settings.useEndpointSuffixes[provider]) {
+                    const suffix =
+                        settings.endpointSuffixes[provider] || "/models";
+                    url = baseUrl.endsWith(suffix)
+                        ? baseUrl
+                        : `${baseUrl}${suffix.startsWith("/") ? "" : "/"}${suffix}`;
+                } else {
+                    url = `${baseUrl}/models`;
+                }
+
+                const key =
+                    provider === "openai"
+                        ? settings.openaiKey
+                        : settings.customKey;
+
+                const res = await fetch(url, {
+                    headers: key ? { Authorization: `Bearer ${key}` } : {},
+                });
+                if (res.ok) {
+                    testResults[provider] = { status: "success" };
+                } else {
+                    const txt = await res.text();
+                    testResults[provider] = {
+                        status: "error",
+                        message: `HTTP ${res.status}: ${txt.slice(0, 50)}...`,
+                    };
+                }
+            } else if (provider === "gemini") {
+                const baseUrl = settings.baseUrls.gemini.replace(/\/$/, "");
+                const url = `${baseUrl}/models?key=${settings.geminiKey}`;
+                const res = await fetch(url);
+                if (res.ok) {
+                    testResults[provider] = { status: "success" };
+                } else {
+                    testResults[provider] = {
+                        status: "error",
+                        message: `HTTP ${res.status}`,
+                    };
+                }
+            } else if (provider === "anthropic") {
+                const baseUrl = settings.baseUrls.anthropic.replace(/\/$/, "");
+                let url = baseUrl;
+                if (settings.useEndpointSuffixes.anthropic) {
+                    const suffix =
+                        settings.endpointSuffixes.anthropic || "/messages";
+                    url = baseUrl.endsWith(suffix)
+                        ? baseUrl
+                        : `${baseUrl}${suffix.startsWith("/") ? "" : "/"}${suffix}`;
+                }
+
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "x-api-key": settings.anthropicKey,
+                        "anthropic-version": "2023-06-01",
+                        "content-type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        model: settings.models.anthropic,
+                        max_tokens: 1,
+                        messages: [{ role: "user", content: "ping" }],
+                    }),
+                });
+                // Anthropic will return 200 even for max_tokens: 1
+                if (res.ok) {
+                    testResults[provider] = { status: "success" };
+                } else {
+                    const txt = await res.text();
+                    testResults[provider] = {
+                        status: "error",
+                        message: `HTTP ${res.status}: ${txt.slice(0, 50)}...`,
+                    };
+                }
+            }
+        } catch (e: any) {
+            testResults[provider] = { status: "error", message: e.message };
+        }
+    }
 
     function toggleKey(provider: string) {
         showKey[provider] = !showKey[provider];
@@ -61,6 +166,32 @@
             },
         };
     }
+
+    function selectSuffix(provider: string, suffix: string) {
+        if (settings.endpointSuffixes) {
+            (settings.endpointSuffixes as any)[provider] = suffix;
+        }
+        showSuffixDropdown = false;
+    }
+
+    const commonSuffixes: Record<string, string[]> = {
+        openai: [
+            "/v1/chat/completions",
+            "/chat/completions",
+            "/v1/completions",
+            "/completions",
+            "/v1/responses",
+            "/responses",
+        ],
+        anthropic: ["/v1/messages", "/messages"],
+        gemini: [":streamGenerateContent", ":generateContent"],
+        custom: [
+            "/v1/chat/completions",
+            "/chat/completions",
+            "/v1/messages",
+            "/messages",
+        ],
+    };
 
     async function fetchModels(
         provider: "openai" | "anthropic" | "gemini" | "custom",
@@ -419,11 +550,46 @@
                             in:fly={{ y: 10, duration: 300 }}
                         >
                             <div class="group relative">
-                                <label
-                                    for="openai-key"
-                                    class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1 transition-colors group-focus-within:text-purple-600"
-                                    >API Key</label
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
                                 >
+                                    <label
+                                        for="openai-key"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-purple-600"
+                                        >API Key</label
+                                    >
+                                    <div class="flex items-center gap-2">
+                                        {#if testResults.openai.status !== "idle"}
+                                            <span
+                                                class="text-[9px] font-bold uppercase tracking-wider {testResults
+                                                    .openai.status === 'success'
+                                                    ? 'text-green-500'
+                                                    : testResults.openai
+                                                            .status === 'error'
+                                                      ? 'text-red-500'
+                                                      : 'text-neutral-400'}"
+                                            >
+                                                {testResults.openai.status ===
+                                                "testing"
+                                                    ? t.testing
+                                                    : testResults.openai
+                                                            .status ===
+                                                        "success"
+                                                      ? t.connectionSuccess
+                                                      : t.connectionFailed}
+                                            </span>
+                                        {/if}
+                                        <button
+                                            onclick={() =>
+                                                testConnection("openai")}
+                                            disabled={testResults.openai
+                                                .status === "testing"}
+                                            class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 transition-all"
+                                        >
+                                            {t.testConnection}
+                                        </button>
+                                    </div>
+                                </div>
                                 <div class="relative">
                                     <input
                                         id="openai-key"
@@ -525,6 +691,89 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="group relative">
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
+                                >
+                                    <label
+                                        for="openai-suffix"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-purple-600"
+                                        >{t.endpointSuffix}</label
+                                    >
+                                    <label
+                                        class="relative inline-flex items-center cursor-pointer"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={
+                                                settings.useEndpointSuffixes
+                                                    .openai
+                                            }
+                                            class="sr-only peer"
+                                        />
+                                        <div
+                                            class="w-7 h-4 bg-neutral-200 dark:bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-600"
+                                        ></div>
+                                        <span
+                                            class="ml-2 text-[9px] font-bold text-neutral-500 uppercase tracking-widest leading-none"
+                                            >{t.enableSuffix}</span
+                                        >
+                                    </label>
+                                </div>
+                                <div
+                                    class="relative w-full"
+                                    use:clickOutside={{
+                                        enabled: showSuffixDropdown,
+                                        callback: () =>
+                                            (showSuffixDropdown = false),
+                                    }}
+                                >
+                                    <input
+                                        id="openai-suffix"
+                                        type="text"
+                                        bind:value={
+                                            settings.endpointSuffixes.openai
+                                        }
+                                        disabled={!settings.useEndpointSuffixes
+                                            .openai}
+                                        placeholder="/chat/completions"
+                                        class="w-full bg-neutral-100 dark:bg-black/40 border border-transparent focus:border-purple-500/30 focus:bg-white dark:focus:bg-black/60 rounded-2xl py-3.5 pl-5 pr-10 text-sm font-mono font-medium text-purple-600 dark:text-purple-400 placeholder-neutral-400 focus:outline-none focus:ring-4 focus:ring-purple-500/10 transition-all duration-300 disabled:opacity-50"
+                                        onfocus={() =>
+                                            (showSuffixDropdown = true)}
+                                    />
+                                    <button
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all"
+                                        onclick={() =>
+                                            (showSuffixDropdown =
+                                                !showSuffixDropdown)}
+                                    >
+                                        <ChevronDown class="size-4" />
+                                    </button>
+                                    {#if showSuffixDropdown && settings.provider === "openai"}
+                                        <div
+                                            class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
+                                            in:fly={{
+                                                y: 10,
+                                                duration: 200,
+                                            }}
+                                        >
+                                            {#each commonSuffixes.openai as suffix}
+                                                <button
+                                                    class="text-left w-full px-3 py-2.5 rounded-xl text-xs font-mono text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                                                    onclick={() =>
+                                                        selectSuffix(
+                                                            "openai",
+                                                            suffix,
+                                                        )}
+                                                >
+                                                    {suffix}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                    {/if}
+                                </div>
+                            </div>
                         </div>
                     {:else if settings.provider === "anthropic"}
                         <div
@@ -532,11 +781,47 @@
                             in:fly={{ y: 10, duration: 300 }}
                         >
                             <div class="group relative">
-                                <label
-                                    for="anthropic-key"
-                                    class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1 transition-colors group-focus-within:text-orange-600"
-                                    >API Key</label
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
                                 >
+                                    <label
+                                        for="anthropic-key"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-orange-600"
+                                        >API Key</label
+                                    >
+                                    <div class="flex items-center gap-2">
+                                        {#if testResults.anthropic.status !== "idle"}
+                                            <span
+                                                class="text-[9px] font-bold uppercase tracking-wider {testResults
+                                                    .anthropic.status ===
+                                                'success'
+                                                    ? 'text-green-500'
+                                                    : testResults.anthropic
+                                                            .status === 'error'
+                                                      ? 'text-red-500'
+                                                      : 'text-neutral-400'}"
+                                            >
+                                                {testResults.anthropic
+                                                    .status === "testing"
+                                                    ? t.testing
+                                                    : testResults.anthropic
+                                                            .status ===
+                                                        "success"
+                                                      ? t.connectionSuccess
+                                                      : t.connectionFailed}
+                                            </span>
+                                        {/if}
+                                        <button
+                                            onclick={() =>
+                                                testConnection("anthropic")}
+                                            disabled={testResults.anthropic
+                                                .status === "testing"}
+                                            class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 transition-all"
+                                        >
+                                            {t.testConnection}
+                                        </button>
+                                    </div>
+                                </div>
                                 <div class="relative">
                                     <input
                                         id="anthropic-key"
@@ -640,6 +925,89 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="group relative">
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
+                                >
+                                    <label
+                                        for="anthropic-suffix"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-orange-600"
+                                        >{t.endpointSuffix}</label
+                                    >
+                                    <label
+                                        class="relative inline-flex items-center cursor-pointer"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={
+                                                settings.useEndpointSuffixes
+                                                    .anthropic
+                                            }
+                                            class="sr-only peer"
+                                        />
+                                        <div
+                                            class="w-7 h-4 bg-neutral-200 dark:bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-orange-600"
+                                        ></div>
+                                        <span
+                                            class="ml-2 text-[9px] font-bold text-neutral-500 uppercase tracking-widest leading-none"
+                                            >{t.enableSuffix}</span
+                                        >
+                                    </label>
+                                </div>
+                                <div
+                                    class="relative w-full"
+                                    use:clickOutside={{
+                                        enabled: showSuffixDropdown,
+                                        callback: () =>
+                                            (showSuffixDropdown = false),
+                                    }}
+                                >
+                                    <input
+                                        id="anthropic-suffix"
+                                        type="text"
+                                        bind:value={
+                                            settings.endpointSuffixes.anthropic
+                                        }
+                                        disabled={!settings.useEndpointSuffixes
+                                            .anthropic}
+                                        placeholder="/messages"
+                                        class="w-full bg-neutral-100 dark:bg-black/40 border border-transparent focus:border-orange-500/30 focus:bg-white dark:focus:bg-black/60 rounded-2xl py-3.5 pl-5 pr-10 text-sm font-mono font-medium text-orange-600 dark:text-orange-400 focus:outline-none focus:ring-4 focus:ring-orange-500/10 transition-all duration-300 disabled:opacity-50"
+                                        onfocus={() =>
+                                            (showSuffixDropdown = true)}
+                                    />
+                                    <button
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all"
+                                        onclick={() =>
+                                            (showSuffixDropdown =
+                                                !showSuffixDropdown)}
+                                    >
+                                        <ChevronDown class="size-4" />
+                                    </button>
+                                    {#if showSuffixDropdown && settings.provider === "anthropic"}
+                                        <div
+                                            class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
+                                            in:fly={{
+                                                y: 10,
+                                                duration: 200,
+                                            }}
+                                        >
+                                            {#each commonSuffixes.anthropic as suffix}
+                                                <button
+                                                    class="text-left w-full px-3 py-2.5 rounded-xl text-xs font-mono text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+                                                    onclick={() =>
+                                                        selectSuffix(
+                                                            "anthropic",
+                                                            suffix,
+                                                        )}
+                                                >
+                                                    {suffix}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                    {/if}
+                                </div>
+                            </div>
                         </div>
                     {:else if settings.provider === "gemini"}
                         <div
@@ -647,11 +1015,46 @@
                             in:fly={{ y: 10, duration: 300 }}
                         >
                             <div class="group relative">
-                                <label
-                                    for="gemini-key"
-                                    class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1 transition-colors group-focus-within:text-blue-600"
-                                    >API Key</label
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
                                 >
+                                    <label
+                                        for="gemini-key"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-blue-600"
+                                        >API Key</label
+                                    >
+                                    <div class="flex items-center gap-2">
+                                        {#if testResults.gemini.status !== "idle"}
+                                            <span
+                                                class="text-[9px] font-bold uppercase tracking-wider {testResults
+                                                    .gemini.status === 'success'
+                                                    ? 'text-green-500'
+                                                    : testResults.gemini
+                                                            .status === 'error'
+                                                      ? 'text-red-500'
+                                                      : 'text-neutral-400'}"
+                                            >
+                                                {testResults.gemini.status ===
+                                                "testing"
+                                                    ? t.testing
+                                                    : testResults.gemini
+                                                            .status ===
+                                                        "success"
+                                                      ? t.connectionSuccess
+                                                      : t.connectionFailed}
+                                            </span>
+                                        {/if}
+                                        <button
+                                            onclick={() =>
+                                                testConnection("gemini")}
+                                            disabled={testResults.gemini
+                                                .status === "testing"}
+                                            class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-all"
+                                        >
+                                            {t.testConnection}
+                                        </button>
+                                    </div>
+                                </div>
                                 <div class="relative">
                                     <input
                                         id="gemini-key"
@@ -753,6 +1156,89 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="group relative">
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
+                                >
+                                    <label
+                                        for="gemini-suffix"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-blue-600"
+                                        >{t.endpointSuffix}</label
+                                    >
+                                    <label
+                                        class="relative inline-flex items-center cursor-pointer"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={
+                                                settings.useEndpointSuffixes
+                                                    .gemini
+                                            }
+                                            class="sr-only peer"
+                                        />
+                                        <div
+                                            class="w-7 h-4 bg-neutral-200 dark:bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"
+                                        ></div>
+                                        <span
+                                            class="ml-2 text-[9px] font-bold text-neutral-500 uppercase tracking-widest leading-none"
+                                            >{t.enableSuffix}</span
+                                        >
+                                    </label>
+                                </div>
+                                <div
+                                    class="relative w-full"
+                                    use:clickOutside={{
+                                        enabled: showSuffixDropdown,
+                                        callback: () =>
+                                            (showSuffixDropdown = false),
+                                    }}
+                                >
+                                    <input
+                                        id="gemini-suffix"
+                                        type="text"
+                                        bind:value={
+                                            settings.endpointSuffixes.gemini
+                                        }
+                                        disabled={!settings.useEndpointSuffixes
+                                            .gemini}
+                                        placeholder=":streamGenerateContent"
+                                        class="w-full bg-neutral-100 dark:bg-black/40 border border-transparent focus:border-blue-500/30 focus:bg-white dark:focus:bg-black/60 rounded-2xl py-3.5 pl-5 pr-10 text-sm font-mono font-medium text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 transition-all duration-300 disabled:opacity-50"
+                                        onfocus={() =>
+                                            (showSuffixDropdown = true)}
+                                    />
+                                    <button
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all"
+                                        onclick={() =>
+                                            (showSuffixDropdown =
+                                                !showSuffixDropdown)}
+                                    >
+                                        <ChevronDown class="size-4" />
+                                    </button>
+                                    {#if showSuffixDropdown && settings.provider === "gemini"}
+                                        <div
+                                            class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
+                                            in:fly={{
+                                                y: 10,
+                                                duration: 200,
+                                            }}
+                                        >
+                                            {#each commonSuffixes.gemini as suffix}
+                                                <button
+                                                    class="text-left w-full px-3 py-2.5 rounded-xl text-xs font-mono text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                    onclick={() =>
+                                                        selectSuffix(
+                                                            "gemini",
+                                                            suffix,
+                                                        )}
+                                                >
+                                                    {suffix}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                    {/if}
+                                </div>
+                            </div>
                         </div>
                     {:else if settings.provider === "custom"}
                         <div
@@ -760,11 +1246,50 @@
                             in:fly={{ y: 10, duration: 300 }}
                         >
                             <div class="group relative">
-                                <label
-                                    for="custom-key"
-                                    class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5 ml-1 transition-colors group-focus-within:text-pink-600"
-                                    >API Key</label
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
                                 >
+                                    <label
+                                        for="custom-key"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-pink-600"
+                                        >API Key</label
+                                    >
+                                    <div class="flex items-center gap-2">
+                                        {#if testResults.custom.status !== "idle"}
+                                            <span
+                                                class="text-[9px] font-bold uppercase tracking-wider {testResults
+                                                    .custom.status === 'success'
+                                                    ? 'text-green-500'
+                                                    : testResults.custom
+                                                            .status === 'error'
+                                                      ? 'text-red-500'
+                                                      : 'text-neutral-400'}"
+                                            >
+                                                {testResults.custom.status ===
+                                                "testing"
+                                                    ? t.testing
+                                                    : testResults.custom
+                                                            .status ===
+                                                        "success"
+                                                      ? t.connectionSuccess
+                                                      : testResults.custom
+                                                              .status ===
+                                                          "error"
+                                                        ? t.connectionFailed
+                                                        : ""}
+                                            </span>
+                                        {/if}
+                                        <button
+                                            onclick={() =>
+                                                testConnection("custom")}
+                                            disabled={testResults.custom
+                                                .status === "testing"}
+                                            class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-pink-500/10 text-pink-600 hover:bg-pink-500/20 transition-all"
+                                        >
+                                            {t.testConnection}
+                                        </button>
+                                    </div>
+                                </div>
                                 <div class="relative">
                                     <input
                                         id="custom-key"
@@ -904,6 +1429,89 @@
                                             </button>
                                         {/if}
                                     </div>
+                                </div>
+                            </div>
+
+                            <div class="group relative">
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
+                                >
+                                    <label
+                                        for="custom-suffix"
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-pink-600"
+                                        >{t.endpointSuffix}</label
+                                    >
+                                    <label
+                                        class="relative inline-flex items-center cursor-pointer"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            bind:checked={
+                                                settings.useEndpointSuffixes
+                                                    .custom
+                                            }
+                                            class="sr-only peer"
+                                        />
+                                        <div
+                                            class="w-7 h-4 bg-neutral-200 dark:bg-neutral-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-pink-600"
+                                        ></div>
+                                        <span
+                                            class="ml-2 text-[9px] font-bold text-neutral-500 uppercase tracking-widest leading-none"
+                                            >{t.enableSuffix}</span
+                                        >
+                                    </label>
+                                </div>
+                                <div
+                                    class="relative w-full"
+                                    use:clickOutside={{
+                                        enabled: showSuffixDropdown,
+                                        callback: () =>
+                                            (showSuffixDropdown = false),
+                                    }}
+                                >
+                                    <input
+                                        id="custom-suffix"
+                                        type="text"
+                                        bind:value={
+                                            settings.endpointSuffixes.custom
+                                        }
+                                        disabled={!settings.useEndpointSuffixes
+                                            .custom}
+                                        placeholder="/chat/completions"
+                                        class="w-full bg-neutral-100 dark:bg-black/40 border border-transparent focus:border-pink-500/30 focus:bg-white dark:focus:bg-black/60 rounded-2xl py-3.5 pl-5 pr-10 text-sm font-mono font-medium text-pink-600 dark:text-pink-400 focus:outline-none focus:ring-4 focus:ring-pink-500/10 transition-all duration-300 disabled:opacity-50"
+                                        onfocus={() =>
+                                            (showSuffixDropdown = true)}
+                                    />
+                                    <button
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/20 transition-all"
+                                        onclick={() =>
+                                            (showSuffixDropdown =
+                                                !showSuffixDropdown)}
+                                    >
+                                        <ChevronDown class="size-4" />
+                                    </button>
+                                    {#if showSuffixDropdown && settings.provider === "custom"}
+                                        <div
+                                            class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
+                                            in:fly={{
+                                                y: 10,
+                                                duration: 200,
+                                            }}
+                                        >
+                                            {#each commonSuffixes.custom as suffix}
+                                                <button
+                                                    class="text-left w-full px-3 py-2.5 rounded-xl text-xs font-mono text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/10 hover:text-pink-600 dark:hover:text-pink-400 transition-colors"
+                                                    onclick={() =>
+                                                        selectSuffix(
+                                                            "custom",
+                                                            suffix,
+                                                        )}
+                                                >
+                                                    {suffix}
+                                                </button>
+                                            {/each}
+                                        </div>
+                                    {/if}
                                 </div>
                             </div>
                         </div>

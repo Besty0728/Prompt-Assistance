@@ -42,6 +42,7 @@ export const translations = {
         connectionSuccess: '连接成功',
         connectionFailed: '连接失败',
         endpointSuffix: '端点后缀',
+        enableSuffix: '启用端点后缀',
     },
     en: {
         title: 'Prompt-Assistance',
@@ -86,6 +87,7 @@ export const translations = {
         connectionSuccess: 'Connected',
         connectionFailed: 'Failed',
         endpointSuffix: 'Endpoint Suffix',
+        enableSuffix: 'Enable Suffix',
     },
 };
 

@@ -8,6 +8,8 @@ export interface CompletionOptions {
     baseURL?: string;
     model: string;
     provider?: 'openai' | 'anthropic' | 'gemini' | 'custom';
+    endpointSuffix?: string;
+    useEndpointSuffix?: boolean;
 }
 
 export async function chatCompletion(
@@ -15,14 +17,12 @@ export async function chatCompletion(
     options: CompletionOptions,
     onChunk: (chunk: string) => void
 ) {
-    const { provider = 'openai' } = options;
-
+    const provider = options.provider || 'openai';
     if (provider === 'anthropic') {
         await streamAnthropic(messages, options, onChunk);
     } else if (provider === 'gemini') {
         await streamGemini(messages, options, onChunk);
     } else {
-        // OpenAI and Custom (Generic OpenAI Compatible)
         await streamOpenAI(messages, options, onChunk);
     }
 }
@@ -34,7 +34,17 @@ async function streamOpenAI(
     onChunk: (chunk: string) => void
 ) {
     const baseURL = (options.baseURL || 'https://api.openai.com/v1').replace(/\/$/, '');
-    const url = `${baseURL}/chat/completions`;
+    // Priority: User defined suffix > Intelligent default
+    let url = baseURL;
+    const shouldAddSuffix = options.useEndpointSuffix !== false;
+
+    if (shouldAddSuffix) {
+        if (options.endpointSuffix) {
+            url = baseURL.endsWith(options.endpointSuffix) ? baseURL : `${baseURL}${options.endpointSuffix.startsWith('/') ? '' : '/'}${options.endpointSuffix}`;
+        } else {
+            url = baseURL.endsWith('/chat/completions') ? baseURL : `${baseURL}/chat/completions`;
+        }
+    }
 
     const response = await fetch(url, {
         method: 'POST',
@@ -50,40 +60,21 @@ async function streamOpenAI(
         })
     });
 
-    if (!response.body) throw new Error('No response body from OpenAI');
     if (!response.ok) {
         const err = await response.text();
         throw new Error(`OpenAI API Error: ${err}`);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith('data: ')) continue;
-
-            const data = trimmed.slice(6);
-            if (data === '[DONE]') continue;
-
-            try {
-                const json = JSON.parse(data);
-                const content = json.choices?.[0]?.delta?.content || '';
-                if (content) onChunk(content);
-            } catch (e) {
-                console.warn('Failed to parse OpenAI chunk', e);
-            }
+    await parseSSE(response, (data) => {
+        if (data === '[DONE]') return;
+        try {
+            const json = JSON.parse(data);
+            const content = json.choices?.[0]?.delta?.content || '';
+            if (content) onChunk(content);
+        } catch (e) {
+            console.warn('Failed to parse OpenAI chunk', e);
         }
-    }
+    });
 }
 
 // --- Anthropic Implementation ---
@@ -93,9 +84,17 @@ async function streamAnthropic(
     onChunk: (chunk: string) => void
 ) {
     const baseURL = (options.baseURL || 'https://api.anthropic.com/v1').replace(/\/$/, '');
-    const url = `${baseURL}/messages`;
+    let url = baseURL;
+    const shouldAddSuffix = options.useEndpointSuffix !== false;
 
-    // Filter out system message to top-level parameter
+    if (shouldAddSuffix) {
+        if (options.endpointSuffix) {
+            url = baseURL.endsWith(options.endpointSuffix) ? baseURL : `${baseURL}${options.endpointSuffix.startsWith('/') ? '' : '/'}${options.endpointSuffix}`;
+        } else {
+            url = baseURL.endsWith('/messages') ? baseURL : `${baseURL}/messages`;
+        }
+    }
+
     const systemMessage = messages.find(m => m.role === 'system');
     const userMessages = messages.filter(m => m.role !== 'system');
 
@@ -120,43 +119,12 @@ async function streamAnthropic(
         body: JSON.stringify(body)
     });
 
-    if (!response.body) throw new Error('No response body from Anthropic');
     if (!response.ok) {
         const err = await response.text();
         throw new Error(`Anthropic API Error: ${err}`);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || !trimmed.startsWith('event: ')) continue;
-
-            // Anthropic SSE format:
-            // event: content_block_delta
-            // data: {"type": "content_block_delta", ... "delta": {"type": "text_delta", "text": "..."}}
-
-            // We need to read the NEXT line for data
-            // Actually, simpler parsing: split block by double newline
-        }
-    }
-
-    // Re-do parsing for SSE correctly because Anthropic events are multi-line
-    // event: ...
-    // data: ...
-    //
-    // Use a simpler approach for SSE
-    await parseSSE(response, (event, data) => {
+    await parseSSE(response, (data, event) => {
         if (event === 'content_block_delta') {
             try {
                 const json = JSON.parse(data);
@@ -168,36 +136,6 @@ async function streamAnthropic(
     });
 }
 
-// Helper for generic SSE parsing (handling multi-line events)
-async function parseSSE(response: Response, onEvent: (event: string, data: string) => void) {
-    const reader = response.body?.getReader();
-    if (!reader) return;
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() || '';
-
-        for (const part of parts) {
-            const lines = part.split('\n');
-            let event = '';
-            let data = '';
-
-            for (const line of lines) {
-                if (line.startsWith('event: ')) event = line.slice(7).trim();
-                else if (line.startsWith('data: ')) data = line.slice(6).trim();
-            }
-            if (event && data) onEvent(event, data);
-        }
-    }
-}
-
-
 // --- Gemini Implementation ---
 async function streamGemini(
     messages: Message[],
@@ -206,11 +144,6 @@ async function streamGemini(
 ) {
     const baseURL = (options.baseURL || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/$/, '');
     const url = `${baseURL}/models/${options.model}:streamGenerateContent?key=${options.apiKey}`;
-
-    // Gemini Content Format:
-    // { contents: [{ role: 'user', parts: [{ text: '...' }] }] }
-    // System instruction is top level (beta) or just merged. Let's merge system prompt for specific 'user' role or use system_instruction if available.
-    // Official API: v1beta supports system_instruction.
 
     const systemMessage = messages.find(m => m.role === 'system');
     const conversation = messages.filter(m => m.role !== 'system').map(m => ({
@@ -239,22 +172,13 @@ async function streamGemini(
         body: JSON.stringify(body)
     });
 
-    if (!response.body) throw new Error('No response body from Gemini');
     if (!response.ok) {
         const err = await response.text();
         throw new Error(`Gemini API Error: ${err}`);
     }
 
-    // Gemini returns a streamed JSON array [ { ... }, { ... } ] but it might come in chunks like other SSE or just pure JSON array stream.
-    // Wait, Gemini streamGenerateContent returns a stream of JSON objects, usually separated.
-    // Actually it's standard JSON stream usually.
-    // Let's assume standard fetch stream reading.
-    // NOTE: Gemini REST API returns a JSON array, but it sends chunks of the array.
-    // We need to parse a partial JSON array or just handle the objects as they arrive.
-    // Easier way: Read text, find "text": "..." fields.
-
-    // A robust way for simple streaming:
-    const reader = response.body.getReader();
+    const reader = response.body?.getReader();
+    if (!reader) return;
     const decoder = new TextDecoder();
     let buffer = '';
 
@@ -263,14 +187,8 @@ async function streamGemini(
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        // Hacky but effective for complex JSON streams without full parser:
-        // Look for "text": "..." patterns in the new buffer or balanced braces.
-        // Better: Gemini returns objects like: { "candidates": [ ... ] }
-        // The stream format is usually comma separated objects [ {...}, \n {...} ]
-
-        // Let's try to split by some delimiter if possible, or just parse valid JSON objects from buffer.
-
-        // Attempt to find complete JSON objects in buffer (assuming they are separated by comma or newlines)
+        // Gemini stream returns objects in a JSON array like: [ { ... }, { ... } ]
+        // We look for valid JSON objects within the stream.
         let startIndex = 0;
         let braceCount = 0;
         let inString = false;
@@ -285,20 +203,55 @@ async function streamGemini(
                 } else if (char === '}') {
                     braceCount--;
                     if (braceCount === 0) {
-                        // Found a complete object
                         const jsonStr = buffer.substring(startIndex, i + 1);
                         try {
                             const json = JSON.parse(jsonStr);
                             const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
                             if (text) onChunk(text);
                         } catch (e) { }
-                        // Advance buffer
-                        // buffer = buffer.slice(i + 1); // Careful, modifying loop var
-                        // Actually better to just mark processed.
+                        // Note: We don't slice the buffer here to avoid messing up the loop
                     }
                 }
             }
         }
+        // Keep only the unprocessed part of the buffer (after the last complete '}')
+        const lastBrace = buffer.lastIndexOf('}');
+        if (lastBrace !== -1) {
+            buffer = buffer.substring(lastBrace + 1);
+        }
+    }
+}
 
+// --- Robust SSE Parser ---
+async function parseSSE(response: Response, onData: (data: string, event: string) => void) {
+    const reader = response.body?.getReader();
+    if (!reader) return;
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+            const lines = part.split('\n');
+            let event = 'message';
+            let data = '';
+
+            for (const line of lines) {
+                if (line.startsWith('event:')) {
+                    event = line.slice(6).trim();
+                } else if (line.startsWith('data:')) {
+                    data += line.slice(5).trim();
+                }
+            }
+            if (data) {
+                onData(data, event);
+            }
+        }
     }
 }
