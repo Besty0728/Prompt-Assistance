@@ -28,3 +28,4 @@ dist-ssr
 .env
 .env.*
 !.env.example
+antigravity_bg_guide.md
