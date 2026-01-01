@@ -52,6 +52,8 @@ npm run dev
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2FPrompt-Assistance)
 
+> 💡 **提示**：为便于后续更新，建议先 Fork 本仓库到您的账户，然后手动连接平台进行部署。
+
 1. 点击上方的 **Deploy with Vercel** 按钮。
 2. 关联并授权您的 GitHub 仓库。
 3. 框架预设选择 **Vite**。
@@ -60,6 +62,8 @@ npm run dev
 ### Cloudflare Pages
 
 [![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
+
+> 💡 **提示**：为便于后续更新，建议先 Fork 本仓库到您的账户，然后手动连接平台进行部署。
 
 1. 在 [Cloudflare 控制台](https://dash.cloudflare.com/)，进入 **Workers & Pages** → **创建** → **Pages**。
 2. 连接您的 GitHub 仓库。
@@ -72,6 +76,8 @@ npm run dev
 ### Cloudflare Workers
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
+
+> 💡 **提示**：为便于后续更新，建议先 Fork 本仓库到您的账户，然后手动连接平台进行部署。
 
 1. 安装 Wrangler CLI：`npm install -g wrangler`
 2. 登录 Cloudflare：`wrangler login`

@@ -52,6 +52,8 @@ This project is a 100% static SPA application and can be easily deployed on any 
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2FPrompt-Assistance)
 
+> 💡 **Tip**: For easier updates, we recommend forking this repository first, then manually connecting your fork to the platform.
+
 1. Click the **Deploy with Vercel** button above.
 2. Link and authorize your GitHub repository.
 3. Select **Vite** as the framework preset.
@@ -60,6 +62,8 @@ This project is a 100% static SPA application and can be easily deployed on any 
 ### Cloudflare Pages
 
 [![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
+
+> 💡 **Tip**: For easier updates, we recommend forking this repository first, then manually connecting your fork to the platform.
 
 1. In the [Cloudflare Dashboard](https://dash.cloudflare.com/), go to **Workers & Pages** → **Create** → **Pages**.
 2. Connect your GitHub repository.
@@ -72,6 +76,8 @@ This project is a 100% static SPA application and can be easily deployed on any 
 ### Cloudflare Workers
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
+
+> 💡 **Tip**: For easier updates, we recommend forking this repository first, then manually connecting your fork to the platform.
 
 1. Install Wrangler CLI: `npm install -g wrangler`
 2. Login to Cloudflare: `wrangler login`
