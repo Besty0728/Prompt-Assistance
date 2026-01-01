@@ -3,6 +3,7 @@
   import { translations } from "./lib/i18n";
   import Optimizer from "./components/Optimizer.svelte";
   import Settings from "./components/Settings.svelte";
+  import Background from "./components/Background.svelte";
   import { Settings as SettingsIcon, Sparkles, Sun, Moon } from "lucide-svelte";
 
   let showSettings = $state(false);
@@ -17,58 +18,12 @@
     appState.settings.language =
       appState.settings.language === "zh" ? "en" : "zh";
   }
-
-  let mousePos = $state({ x: 0, y: 0 });
-  const handleMouseMove = (e: MouseEvent) => {
-    // Calculate position relative to center of screen normalized to -50 to 50 range for subtle movement
-    const x = (e.clientX / window.innerWidth - 0.5) * 100;
-    const y = (e.clientY / window.innerHeight - 0.5) * 100;
-    mousePos = { x, y };
-  };
 </script>
 
-<div
-  class="fixed inset-0 z-[-1] bg-gradient-to-br from-stone-100 via-neutral-50 to-stone-100 dark:from-[#0a0a0a] dark:via-[#050505] dark:to-[#0a0a0a] transition-all duration-1000 overflow-hidden"
-  style="--mx: {mousePos.x}px; --my: {mousePos.y}px;"
->
-  <!-- Liquid Glass Orbs - Light Mode (Enhanced) -->
-  <div class="dark:hidden">
-    <div
-      class="absolute top-[5%] left-[10%] w-[550px] h-[550px] bg-gradient-to-br from-violet-400/50 to-fuchsia-400/35 rounded-full blur-[80px] animate-float-fast"
-    ></div>
-    <div
-      class="absolute top-[40%] right-[5%] w-[450px] h-[450px] bg-gradient-to-br from-sky-400/45 to-cyan-400/30 rounded-full blur-[80px] animate-float"
-    ></div>
-    <div
-      class="absolute bottom-[5%] left-[25%] w-[600px] h-[600px] bg-gradient-to-br from-rose-300/40 to-orange-300/25 rounded-full blur-[90px] animate-float-delayed"
-    ></div>
-    <div
-      class="absolute top-[60%] left-[5%] w-[400px] h-[400px] bg-gradient-to-br from-emerald-300/35 to-teal-300/20 rounded-full blur-[70px] animate-float-slow"
-    ></div>
-  </div>
-
-  <!-- Liquid Glass Orbs - Dark Mode -->
-  <div class="hidden dark:block">
-    <div
-      class="absolute top-[10%] left-[15%] w-[600px] h-[600px] bg-gradient-to-br from-violet-600/20 to-fuchsia-600/10 rounded-full blur-[120px] animate-float"
-    ></div>
-    <div
-      class="absolute top-[50%] right-[10%] w-[500px] h-[500px] bg-gradient-to-br from-blue-600/15 to-cyan-600/10 rounded-full blur-[120px] animate-float-delayed"
-    ></div>
-    <div
-      class="absolute bottom-[10%] left-[30%] w-[700px] h-[700px] bg-gradient-to-br from-purple-600/10 to-pink-600/5 rounded-full blur-[140px] animate-float-slow"
-    ></div>
-  </div>
-
-  <!-- Subtle Noise Texture -->
-  <div
-    class="absolute inset-0 opacity-[0.015] dark:opacity-[0.03] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=')]"
-  ></div>
-</div>
+<Background />
 
 <main
   class="h-screen w-screen overflow-hidden flex flex-col text-neutral-800 dark:text-neutral-100 font-sans selection:bg-purple-500/30 relative transition-colors duration-500"
-  onmousemove={handleMouseMove}
 >
   <!-- Header -->
   <header
@@ -188,69 +143,13 @@
 </main>
 
 <style>
-  :global(.animate-float-fast) {
-    animation: float-dynamic 8s ease-in-out infinite;
-  }
-  :global(.animate-float) {
-    animation: float-dynamic 12s ease-in-out infinite;
-    animation-delay: -3s;
-  }
-  :global(.animate-float-delayed) {
-    animation: float-dynamic 15s ease-in-out infinite;
-    animation-delay: -7s;
-  }
-  :global(.animate-float-slow) {
-    animation: float-dynamic 18s ease-in-out infinite;
-    animation-delay: -12s;
-  }
-  @keyframes float-dynamic {
-    0%,
-    100% {
-      transform: translate(calc(var(--mx) * -0.25), calc(var(--my) * -0.25))
-        scale(1);
-      opacity: 0.9;
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
     }
-    20% {
-      transform: translate(
-          calc(var(--mx) * -0.15 + 8%),
-          calc(var(--my) * -0.15 - 6%)
-        )
-        scale(1.08);
-      opacity: 1;
+    to {
+      transform: rotate(360deg);
     }
-    40% {
-      transform: translate(
-          calc(var(--mx) * -0.35 - 5%),
-          calc(var(--my) * -0.35 + 10%)
-        )
-        scale(0.92);
-      opacity: 0.85;
-    }
-    60% {
-      transform: translate(
-          calc(var(--mx) * -0.2 - 10%),
-          calc(var(--my) * -0.2 - 4%)
-        )
-        scale(1.05);
-      opacity: 1;
-    }
-    80% {
-      transform: translate(
-          calc(var(--mx) * -0.3 + 6%),
-          calc(var(--my) * -0.3 + 8%)
-        )
-        scale(0.95);
-      opacity: 0.9;
-    }
-  }
-
-  /* Smooth interactive transition */
-  :global(.animate-float-fast),
-  :global(.animate-float),
-  :global(.animate-float-delayed),
-  :global(.animate-float-slow) {
-    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
-    will-change: transform;
   }
 
   /* Theme Switch Styles */
