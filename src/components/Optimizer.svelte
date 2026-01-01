@@ -147,10 +147,6 @@
 
     function setTarget(model: ModelType) {
         appState.settings.targetModel = model;
-        // Automatically switch provider to match target model for seamless experience
-        if (model === "claude") appState.settings.provider = "anthropic";
-        else if (model === "gpt") appState.settings.provider = "openai";
-        else if (model === "gemini") appState.settings.provider = "gemini";
     }
 </script>
 
