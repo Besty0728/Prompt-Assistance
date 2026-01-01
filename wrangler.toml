@@ -1,0 +1,6 @@
+name = "prompt-assistance"
+compatibility_date = "2024-01-01"
+
+# For Cloudflare Pages static site deployment
+[site]
+bucket = "./dist"
