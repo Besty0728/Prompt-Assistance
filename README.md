@@ -48,21 +48,26 @@ npm run dev
 
 This project is a 100% static SPA application and can be easily deployed on any platform that supports static hosting.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2Fprompt-max)
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/prompt-max)
-[![Deploy with EdgeOne](https://img.shields.io/badge/Deploy%20with-EdgeOne-blue?logo=tencent-cloud&logoColor=white)](https://console.cloud.tencent.com/edgeone/pages)
-
 ### Vercel Deployment (Recommended)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2Fprompt-max)
+
 1. Click the **Deploy with Vercel** button above.
 2. Link and authorize your GitHub repository.
 3. Select **Vite** as the framework preset.
 4. Build Command: `npm run build`, Output Directory: `dist`.
 
 ### Cloudflare Pages / Workers
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/prompt-max)
+
 1. **Pages**: Create a new project in the console, link GitHub, select `Vite` for build options, and set `dist` as the output directory.
 2. **Workers**: After running `npm run build`, deploy using `wrangler pages deploy dist`.
 
 ### EdgeOne Pages (Tencent Cloud)
+
+[![Deploy with EdgeOne](https://img.shields.io/badge/Deploy%20with-EdgeOne-blue?logo=tencent-cloud&logoColor=white)](https://console.cloud.tencent.com/edgeone/pages)
+
 1. In the [EdgeOne Console](https://console.cloud.tencent.com/edgeone), create a new site and enter the **Pages** section.
 2. Click **New Project** and link your GitHub repository.
 3. **Deployment Settings**:
@@ -86,9 +91,3 @@ If you have any ideas or suggestions, please feel free to submit an Issue.
 - **Author**: [Betsy](https://micostar.cc)
 - **Blog**: [https://micostar.cc](https://micostar.cc)
 - **Project Link**: [Prompt-Assistance](https://github.com/Besty0728/prompt-max)
-
----
-
-<p align="center">
-  Made with ❤️ by <a href="https://micostar.cc">Betsy</a> and AI
-</p>

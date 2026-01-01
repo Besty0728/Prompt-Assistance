@@ -48,21 +48,26 @@ npm run dev
 
 本项目为纯静态 SPA 应用，可轻松部署于任何支持静态托管的平台。
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2Fprompt-max)
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/prompt-max)
-[![Deploy with EdgeOne](https://img.shields.io/badge/Deploy%20with-EdgeOne-blue?logo=tencent-cloud&logoColor=white)](https://console.cloud.tencent.com/edgeone/pages)
-
 ### Vercel 部署 (推荐)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2Fprompt-max)
+
 1. 点击上方的 **Deploy with Vercel** 按钮。
 2. 关联并授权您的 GitHub 仓库。
 3. 框架预设选择 **Vite**。
 4. 构建命令：`npm run build`，输出目录：`dist`。
 
 ### Cloudflare Pages / Workers
+
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/prompt-max)
+
 1. **Pages**: 在控制台创建新项目，关联 GitHub，构建选项选 `Vite`，输出目录 `dist`。
 2. **Workers**: 运行 `npm run build` 后，使用 `wrangler pages deploy dist` 部署。
 
 ### EdgeOne Pages (腾讯云)
+
+[![Deploy with EdgeOne](https://img.shields.io/badge/Deploy%20with-EdgeOne-blue?logo=tencent-cloud&logoColor=white)](https://console.cloud.tencent.com/edgeone/pages)
+
 1. 在 [EdgeOne 控制台](https://console.cloud.tencent.com/edgeone) 新建站点并进入 **Pages** 页面。
 2. 点击 **新建项目**，关联您的 GitHub 仓库。
 3. **部署设置**:
@@ -86,9 +91,3 @@ npm run dev
 - **作者**: [Betsy](https://micostar.cc)
 - **博客**: [https://micostar.cc](https://micostar.cc)
 - **项目地址**: [Prompt-Assistance](https://github.com/Besty0728/prompt-max)
-
----
-
-<p align="center">
-  Made with ❤️ by <a href="https://micostar.cc">Betsy</a> and AI
-</p>
