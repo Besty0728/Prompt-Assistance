@@ -17,10 +17,19 @@
     appState.settings.language =
       appState.settings.language === "zh" ? "en" : "zh";
   }
+
+  let mousePos = $state({ x: 0, y: 0 });
+  const handleMouseMove = (e: MouseEvent) => {
+    // Calculate position relative to center of screen normalized to -50 to 50 range for subtle movement
+    const x = (e.clientX / window.innerWidth - 0.5) * 100;
+    const y = (e.clientY / window.innerHeight - 0.5) * 100;
+    mousePos = { x, y };
+  };
 </script>
 
 <div
-  class="fixed inset-0 z-[-1] bg-gradient-to-br from-stone-100 via-neutral-50 to-stone-100 dark:from-[#0a0a0a] dark:via-[#050505] dark:to-[#0a0a0a] transition-all duration-1000"
+  class="fixed inset-0 z-[-1] bg-gradient-to-br from-stone-100 via-neutral-50 to-stone-100 dark:from-[#0a0a0a] dark:via-[#050505] dark:to-[#0a0a0a] transition-all duration-1000 overflow-hidden"
+  style="--mx: {mousePos.x}px; --my: {mousePos.y}px;"
 >
   <!-- Liquid Glass Orbs - Light Mode (Enhanced) -->
   <div class="dark:hidden">
@@ -59,6 +68,7 @@
 
 <main
   class="h-screen w-screen overflow-hidden flex flex-col text-neutral-800 dark:text-neutral-100 font-sans selection:bg-purple-500/30 relative transition-colors duration-500"
+  onmousemove={handleMouseMove}
 >
   <!-- Header -->
   <header
@@ -196,25 +206,51 @@
   @keyframes float-dynamic {
     0%,
     100% {
-      transform: translate(0, 0) scale(1);
+      transform: translate(calc(var(--mx) * -0.25), calc(var(--my) * -0.25))
+        scale(1);
       opacity: 0.9;
     }
     20% {
-      transform: translate(8%, -6%) scale(1.08);
+      transform: translate(
+          calc(var(--mx) * -0.15 + 8%),
+          calc(var(--my) * -0.15 - 6%)
+        )
+        scale(1.08);
       opacity: 1;
     }
     40% {
-      transform: translate(-5%, 10%) scale(0.92);
+      transform: translate(
+          calc(var(--mx) * -0.35 - 5%),
+          calc(var(--my) * -0.35 + 10%)
+        )
+        scale(0.92);
       opacity: 0.85;
     }
     60% {
-      transform: translate(-10%, -4%) scale(1.05);
+      transform: translate(
+          calc(var(--mx) * -0.2 - 10%),
+          calc(var(--my) * -0.2 - 4%)
+        )
+        scale(1.05);
       opacity: 1;
     }
     80% {
-      transform: translate(6%, 8%) scale(0.95);
+      transform: translate(
+          calc(var(--mx) * -0.3 + 6%),
+          calc(var(--my) * -0.3 + 8%)
+        )
+        scale(0.95);
       opacity: 0.9;
     }
+  }
+
+  /* Smooth interactive transition */
+  :global(.animate-float-fast),
+  :global(.animate-float),
+  :global(.animate-float-delayed),
+  :global(.animate-float-slow) {
+    transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    will-change: transform;
   }
 
   /* Theme Switch Styles */
