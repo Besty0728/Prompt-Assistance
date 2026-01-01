@@ -80,10 +80,12 @@
             Math.max(width, height) * 0.95,
         );
         if (isDark) {
-            ambientGrad.addColorStop(0, "rgba(99, 102, 241, 0.18)");
+            ambientGrad.addColorStop(0, "rgba(79, 70, 229, 0.1)"); // Indigo 600
+            ambientGrad.addColorStop(0.6, "rgba(147, 51, 234, 0.03)"); // Purple 600
             ambientGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
         } else {
-            ambientGrad.addColorStop(0, "rgba(139, 92, 246, 0.15)");
+            ambientGrad.addColorStop(0, "rgba(124, 58, 237, 0.08)"); // Violet 600
+            ambientGrad.addColorStop(0.5, "rgba(14, 165, 233, 0.05)"); // Sky 500
             ambientGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
         }
         ctx.fillStyle = ambientGrad;
@@ -98,10 +100,10 @@
             Math.max(width, height) * 0.45,
         );
         if (isDark) {
-            coreGrad.addColorStop(0, "rgba(168, 85, 247, 0.25)");
+            coreGrad.addColorStop(0, "rgba(139, 92, 246, 0.15)"); // Purple 500
             coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
         } else {
-            coreGrad.addColorStop(0, "rgba(56, 189, 248, 0.2)");
+            coreGrad.addColorStop(0, "rgba(56, 189, 248, 0.1)"); // Sky 400
             coreGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
         }
         ctx.fillStyle = coreGrad;
@@ -118,27 +120,27 @@
 
             let interactionX = 0;
             let interactionY = 0;
-            if (dist < 450) {
-                const force = (450 - dist) / 450;
-                interactionX = (dx / dist) * force * 35; // Extreme push
-                interactionY = (dy / dist) * force * 35;
+            if (dist < 300) {
+                const force = (300 - dist) / 300;
+                interactionX = (dx / dist) * force * 20;
+                interactionY = (dy / dist) * force * 20;
             }
 
-            const offsetX = (mouse.x - width / 2) * p.depth * -1.5;
-            const offsetY = (mouse.y - height / 2) * p.depth * -1.5;
+            const offsetX = (mouse.x - width / 2) * p.depth * -1;
+            const offsetY = (mouse.y - height / 2) * p.depth * -1;
 
-            const drawX = p.x + offsetX + interactionX + Math.cos(p.angle) * 5;
-            const drawY = p.y + offsetY + interactionY + Math.sin(p.angle) * 5;
+            const drawX = p.x + offsetX + interactionX + Math.cos(p.angle) * 3;
+            const drawY = p.y + offsetY + interactionY + Math.sin(p.angle) * 3;
 
-            // ULTRA Bold Stroke
-            ctx.lineWidth = 2.8;
+            // Subtler Stroke
+            ctx.lineWidth = 1.0;
             ctx.strokeStyle = isDark
-                ? `rgba(255, 255, 255, ${p.opacity * 1.15})`
-                : `rgba(0, 0, 0, ${p.opacity * 0.9})`;
+                ? `rgba(255, 255, 255, ${p.opacity})`
+                : `rgba(0, 0, 0, ${p.opacity * 0.6})`;
 
-            // Extreme dynamic length (Motion Blur feel)
+            // Subtler dynamic length
             const dynamicLength =
-                p.length * (1 + (interactionX !== 0 ? 0.6 : 0));
+                p.length * (1 + (interactionX !== 0 ? 0.5 : 0));
 
             ctx.beginPath();
             ctx.moveTo(drawX, drawY);
