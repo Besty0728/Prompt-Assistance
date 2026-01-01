@@ -37,6 +37,11 @@ export const translations = {
         addRef: '添加参考文档',
         refTitle: '请输入参考文档标题:',
         refContent: '粘贴文档内容 (Markdown/Text):',
+        testConnection: '检测连接',
+        testing: '检测中...',
+        connectionSuccess: '连接成功',
+        connectionFailed: '连接失败',
+        endpointSuffix: '端点后缀',
     },
     en: {
         title: 'Prompt Max',
@@ -76,6 +81,11 @@ export const translations = {
         addRef: 'Add Reference',
         refTitle: 'Enter reference title:',
         refContent: 'Paste reference content (Markdown/Text):',
+        testConnection: 'Test Connection',
+        testing: 'Testing...',
+        connectionSuccess: 'Connected',
+        connectionFailed: 'Failed',
+        endpointSuffix: 'Endpoint Suffix',
     },
 };
 
