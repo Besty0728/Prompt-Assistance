@@ -22,6 +22,18 @@
 
 ---
 
+## 🔒 Security & Privacy
+
+Your API keys and settings are **100% secure**:
+
+- **Local Storage Only**: All data (API keys, settings) is stored in your browser's `localStorage` — never sent to any server.
+- **No Backend**: This is a pure static SPA. There is no backend server to collect or store your data.
+- **Direct API Calls**: API requests go directly from your browser to OpenAI/Anthropic/Google — no proxy or middleman.
+- **User Isolation**: Each user's data is completely isolated. Other users on the same deployed domain cannot see your data.
+- **Persistent Storage**: Settings persist until you manually clear browser data. No need to re-enter API keys on each visit.
+
+---
+
 ## 🛠️ Installation & Development
 
 This project is built with **Vite** + **Svelte 5**.
