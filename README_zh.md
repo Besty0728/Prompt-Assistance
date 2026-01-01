@@ -28,7 +28,7 @@
 
 ### 1. 克隆项目
 ```bash
-git clone https://github.com/Besty0728/prompt-max.git
+git clone https://github.com/Besty0728/Prompt-Assistance.git
 cd prompt-max
 ```
 
@@ -50,7 +50,7 @@ npm run dev
 
 ### Vercel 部署 (推荐)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2Fprompt-max)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2FPrompt-Assistance)
 
 1. 点击上方的 **Deploy with Vercel** 按钮。
 2. 关联并授权您的 GitHub 仓库。
@@ -59,7 +59,7 @@ npm run dev
 
 ### Cloudflare Pages / Workers
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/prompt-max)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
 
 1. **Pages**: 在控制台创建新项目，关联 GitHub，构建选项选 `Vite`，输出目录 `dist`。
 2. **Workers**: 运行 `npm run build` 后，使用 `wrangler pages deploy dist` 部署。
@@ -90,4 +90,4 @@ npm run dev
 
 - **作者**: [Betsy](https://micostar.cc)
 - **博客**: [https://micostar.cc](https://micostar.cc)
-- **项目地址**: [Prompt-Assistance](https://github.com/Besty0728/prompt-max)
+- **项目地址**: [Prompt-Assistance](https://github.com/Besty0728/Prompt-Assistance)

@@ -28,7 +28,7 @@ This project is built with **Vite** + **Svelte 5**.
 
 ### 1. Clone the Project
 ```bash
-git clone https://github.com/Besty0728/prompt-max.git
+git clone https://github.com/Besty0728/Prompt-Assistance.git
 cd prompt-max
 ```
 
@@ -50,7 +50,7 @@ This project is a 100% static SPA application and can be easily deployed on any 
 
 ### Vercel Deployment (Recommended)
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2Fprompt-max)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FBesty0728%2FPrompt-Assistance)
 
 1. Click the **Deploy with Vercel** button above.
 2. Link and authorize your GitHub repository.
@@ -59,7 +59,7 @@ This project is a 100% static SPA application and can be easily deployed on any 
 
 ### Cloudflare Pages / Workers
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/prompt-max)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Besty0728/Prompt-Assistance)
 
 1. **Pages**: Create a new project in the console, link GitHub, select `Vite` for build options, and set `dist` as the output directory.
 2. **Workers**: After running `npm run build`, deploy using `wrangler pages deploy dist`.
@@ -90,4 +90,4 @@ If you have any ideas or suggestions, please feel free to submit an Issue.
 
 - **Author**: [Betsy](https://micostar.cc)
 - **Blog**: [https://micostar.cc](https://micostar.cc)
-- **Project Link**: [Prompt-Assistance](https://github.com/Besty0728/prompt-max)
+- **Project Link**: [Prompt-Assistance](https://github.com/Besty0728/Prompt-Assistance)
