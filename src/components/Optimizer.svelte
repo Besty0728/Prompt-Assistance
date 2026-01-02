@@ -187,11 +187,11 @@
 </script>
 
 <div
-    class="w-full h-full flex flex-col bg-white/70 dark:bg-neutral-900/50 backdrop-blur-2xl backdrop-saturate-150 border border-white/50 dark:border-white/10 rounded-[40px] overflow-hidden shadow-[0_32px_80px_-16px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_32px_80px_-16px_rgba(0,0,0,0.5)] transition-all duration-700"
+    class="w-full h-full flex flex-col bg-[var(--glass-surface)] backdrop-blur-3xl saturate-150 border border-[var(--glass-border)] rounded-[40px] overflow-hidden shadow-[var(--glass-shadow)] transition-all duration-700"
 >
     <!-- Inner Header -->
     <div
-        class="shrink-0 h-20 px-8 flex items-center justify-between border-b border-black/5 dark:border-white/5 bg-white/30 dark:bg-white/[0.02]"
+        class="shrink-0 h-20 px-8 flex items-center justify-between border-b border-[var(--glass-border)] bg-white/5 dark:bg-black/5"
     >
         <div class="flex items-center gap-8">
             <!-- macOS Traffic Lights -->
@@ -351,7 +351,7 @@
     <div class="flex-1 flex flex-row min-h-0 overflow-hidden">
         <!-- INPUT SECTION -->
         <div
-            class="flex-1 flex flex-col min-h-0 border-r border-black/[0.03] dark:border-white/5"
+            class="flex-1 flex flex-col min-h-0 border-r border-[var(--glass-border)]"
         >
             <!-- Animated Input Area -->
             <div class="p-8">
@@ -390,7 +390,7 @@
                 </div>
             </div>
 
-            <!-- Reference Context Manager -->
+            <!-- Left Column Content (Reference Context Manager) -->
             <div
                 class="px-8 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden"
             >
@@ -537,27 +537,14 @@
                     </button>
                 </div>
             </div>
-
-            <!-- Fixed footer -->
-            <div
-                class="shrink-0 px-8 py-4 border-t border-black/[0.03] dark:border-white/5 flex justify-between items-center text-[10px] text-neutral-400 dark:text-neutral-600 font-black tracking-widest bg-white/30 dark:bg-black/20"
-            >
-                <span class="flex items-center gap-2"
-                    ><SquareArrowOutUpRight class="size-3" /> SOURCE_INPUT</span
-                >
-                <span
-                    class="bg-neutral-200/50 dark:bg-white/5 px-2.5 py-1 rounded-full cursor-help"
-                    title="*Estimate only. Actual usage may vary."
-                    >~{estimateTokens(inputPrompt)} {t.estTokens}</span
-                >
-            </div>
+            <!-- LEFT FOOTER REMOVED -->
         </div>
 
         <!-- OUTPUT SECTION -->
-        <div class="flex-1 flex flex-col min-h-0 bg-white/20 dark:bg-black/10">
+        <div class="flex-1 flex flex-col min-h-0">
             {#if outputPrompt}
                 <!-- Container for absolute scroll area -->
-                <div class="flex-1 relative">
+                <div class="flex-1 relative bg-black/5">
                     <!-- Absolute scroll container - fills parent exactly -->
                     <div
                         class="absolute inset-0 overflow-y-auto p-8 custom-scrollbar"
@@ -581,7 +568,9 @@
                     </div>
                 </div>
             {:else if isOptimizing}
-                <div class="flex-1 flex flex-col items-center justify-center">
+                <div
+                    class="flex-1 flex flex-col items-center justify-center bg-black/5"
+                >
                     <!-- Generating Loader -->
                     <div class="loader-wrapper">
                         <span class="loader-letter">G</span>
@@ -599,7 +588,7 @@
                 </div>
             {:else}
                 <div
-                    class="flex-1 flex flex-col items-center justify-center gap-10 p-20 select-none"
+                    class="flex-1 flex flex-col items-center justify-center gap-10 p-20 select-none bg-black/5"
                 >
                     <!-- Newton's Cradle Animation -->
                     <div class="newtons-cradle">
@@ -623,22 +612,38 @@
                     </div>
                 </div>
             {/if}
+            <!-- RIGHT FOOTER REMOVED -->
+        </div>
+    </div>
 
-            <div
-                class="shrink-0 px-10 py-4 border-t border-black/[0.03] dark:border-white/5 flex justify-between items-center text-[10px] text-neutral-400 dark:text-neutral-600 font-black tracking-widest bg-white/30 dark:bg-black/10"
+    <!-- UNIFIED FOOTER -->
+    <div
+        class="shrink-0 h-10 border-t border-[var(--glass-border)] bg-gray-50/50 dark:bg-black/20 flex items-center px-8 justify-between text-[10px] uppercase tracking-widest font-black text-neutral-400 dark:text-neutral-500 select-none"
+    >
+        <!-- Left Info -->
+        <div class="flex items-center gap-4">
+            <span class="flex items-center gap-2"
+                ><SquareArrowOutUpRight class="size-3" /> SOURCE</span
             >
-                <span class="flex items-center gap-3">OPTIMIZED_OUTPUT</span>
-                {#if outputPrompt}
-                    <span
-                        class="flex items-center gap-3 text-green-600 dark:text-green-500 bg-green-500/5 px-3 py-1 rounded-full"
-                    >
-                        <span
-                            class="size-2.5 rounded-full bg-current animate-pulse"
-                        ></span>
-                        DEPLOYMENT_READY
-                    </span>
-                {/if}
-            </div>
+            <span class="w-px h-3 bg-neutral-300 dark:bg-white/10"></span>
+            <span title="Estimated Tokens"
+                >~{estimateTokens(inputPrompt)} TOKENS</span
+            >
+        </div>
+
+        <!-- Right Info -->
+        <div class="flex items-center gap-4">
+            {#if outputPrompt}
+                <span
+                    class="flex items-center gap-2 text-green-600 dark:text-green-500"
+                >
+                    <span class="size-1.5 rounded-full bg-current animate-pulse"
+                    ></span>
+                    READY
+                </span>
+                <span class="w-px h-3 bg-neutral-300 dark:bg-white/10"></span>
+            {/if}
+            <span>OUTPUT CONSOLE</span>
         </div>
     </div>
 </div>

@@ -443,13 +443,13 @@
 </script>
 
 <div
-    class="flex flex-col h-full bg-neutral-50/50 dark:bg-[#0a0a0a]/50 text-neutral-900 dark:text-neutral-100 transition-colors duration-500 backdrop-blur-3xl"
+    class="flex flex-col h-full bg-[var(--glass-surface)] backdrop-blur-3xl text-neutral-900 dark:text-neutral-100 transition-colors duration-500"
     in:fade={{ duration: 300 }}
     out:fade={{ duration: 200 }}
 >
     <!-- Settings Header -->
     <div
-        class="flex items-center justify-between px-10 py-6 border-b border-white/20 dark:border-white/5 shrink-0 bg-white/40 dark:bg-black/20 backdrop-blur-xl z-20"
+        class="flex items-center justify-between px-10 py-6 border-b border-[var(--glass-border)] shrink-0 bg-white/5 dark:bg-black/5 backdrop-blur-xl z-20"
     >
         <div class="flex flex-col gap-1">
             <h2

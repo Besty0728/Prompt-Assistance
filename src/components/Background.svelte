@@ -6,212 +6,238 @@
     let ctx: CanvasRenderingContext2D | null;
     let animationFrame: number;
 
+    // Mouse state with Lerp target
     const mouse = {
         x: 0,
         y: 0,
         targetX: 0,
         targetY: 0,
+        currentX: 0,
+        currentY: 0,
     };
 
-    // Particles / Dashes
-    interface Particle {
+    // Particle configuration
+    const PARTICLE_COUNT = 150;
+    const CONNECT_DISTANCE = 140;
+    const MOUSE_REPULSION = 180;
+    const particles: Particle[] = [];
+
+    // Colors
+    const LIGHT_COLOR = "rgba(100, 116, 139, 0.45)"; // Slate-500 equivalent
+    const DARK_COLOR = "rgba(148, 163, 184, 0.35)"; // Slate-400 equivalent
+    const ACCENT_LIGHT = "rgba(168, 85, 247, 0.5)"; // Purple
+    const ACCENT_DARK = "rgba(192, 132, 252, 0.5)"; // Lighter Purple
+
+    class Particle {
         x: number;
         y: number;
-        lx: number;
-        ly: number;
-        angle: number;
-        length: number;
-        speed: number;
-        depth: number; // For parallax hierarchy
-        opacity: number;
-        color: string; // Dynamic color
-    }
+        vx: number;
+        vy: number;
+        size: number;
+        baseX: number;
+        baseY: number;
 
-    let particles: Particle[] = [];
-    const PARTICLE_COUNT = 480; // Back to Subtle
-
-    // Cosmic Palette
-    const colorsDark = ["#38bdf8", "#818cf8", "#c084fc", "#e879f9", "#22d3ee"]; // Sky, Indigo, Purple, Fuchsia, Cyan
-    // Macaroon Palette
-    const colorsLight = ["#ec4899", "#a855f7", "#0ea5e9", "#10b981", "#f97316"]; // Reduced opacity in logic
-
-    function initParticles(width: number, height: number) {
-        particles = [];
-        const isDark = appState.settings.theme === "dark";
-        const palette = isDark ? colorsDark : colorsLight;
-
-        for (let i = 0; i < PARTICLE_COUNT; i++) {
-            particles.push({
-                x: Math.random() * width,
-                y: Math.random() * height,
-                lx: (Math.random() - 0.5) * 40,
-                ly: (Math.random() - 0.5) * 40,
-                angle: Math.random() * Math.PI * 2,
-                length: 4 + Math.random() * 12,
-                speed: 0.005 + Math.random() * 0.015,
-                depth: 0.01 + Math.random() * 0.06,
-                opacity: 0.1 + Math.random() * 0.4, // Back to Subtle
-                color: palette[Math.floor(Math.random() * palette.length)],
-            });
+        constructor(width: number, height: number) {
+            this.x = Math.random() * width;
+            this.y = Math.random() * height;
+            // Constant subtle movement
+            this.vx = (Math.random() - 0.5) * 0.4;
+            this.vy = (Math.random() - 0.5) * 0.4;
+            this.size = Math.random() * 2 + 1.2;
+            this.baseX = this.x;
+            this.baseY = this.y;
         }
-    }
 
-    function resize() {
-        if (!canvas) return;
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-        canvas.width = width * window.devicePixelRatio;
-        canvas.height = height * window.devicePixelRatio;
-        if (ctx) ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-        initParticles(width, height);
-    }
+        update(width: number, height: number) {
+            // Apply mouse repulsion/attraction force
+            const dx = mouse.currentX - this.x;
+            const dy = mouse.currentY - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-    // React to theme changes for particle colors
-    $effect(() => {
-        if (canvas) initParticles(window.innerWidth, window.innerHeight);
-    });
+            // Interactive flow field
+            if (distance < MOUSE_REPULSION) {
+                const forceDirectionX = dx / distance;
+                const forceDirectionY = dy / distance;
+                const maxDistance = MOUSE_REPULSION;
+                const force = (maxDistance - distance) / maxDistance;
+                const directionX = forceDirectionX * force * 3; // Repulsion strength
+                const directionY = forceDirectionY * force * 3;
 
-    function draw() {
-        if (!ctx || !canvas) return;
-
-        const width = window.innerWidth;
-        const height = window.innerHeight;
-
-        // Smooth mouse movement (lerp)
-        mouse.x += (mouse.targetX - mouse.x) * 0.08;
-        mouse.y += (mouse.targetY - mouse.y) * 0.08;
-
-        ctx.clearRect(0, 0, width, height);
-
-        const isDark = appState.settings.theme === "dark";
-
-        // 1. Draw Spotlight Layers (Final Intensity)
-        const ambientGrad = ctx.createRadialGradient(
-            mouse.x,
-            mouse.y,
-            0,
-            mouse.x,
-            mouse.y,
-            Math.max(width, height) * 0.95,
-        );
-        if (isDark) {
-            ambientGrad.addColorStop(0, "rgba(79, 70, 229, 0.1)"); // Indigo 600
-            ambientGrad.addColorStop(0.6, "rgba(147, 51, 234, 0.03)"); // Purple 600
-            ambientGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-        } else {
-            ambientGrad.addColorStop(0, "rgba(244, 114, 182, 0.08)"); // Pink
-            ambientGrad.addColorStop(0.5, "rgba(192, 132, 252, 0.05)"); // Purple
-            ambientGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
-        }
-        ctx.fillStyle = ambientGrad;
-        ctx.fillRect(0, 0, width, height);
-
-        const coreGrad = ctx.createRadialGradient(
-            mouse.x,
-            mouse.y,
-            0,
-            mouse.x,
-            mouse.y,
-            Math.max(width, height) * 0.45,
-        );
-        if (isDark) {
-            coreGrad.addColorStop(0, "rgba(139, 92, 246, 0.15)"); // Purple 500
-            coreGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
-        } else {
-            coreGrad.addColorStop(0, "rgba(34, 211, 238, 0.12)"); // Cyan (fresh center)
-            coreGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
-        }
-        ctx.fillStyle = coreGrad;
-        ctx.fillRect(0, 0, width, height);
-
-        // 2. Draw Particles (Ultra Bold & Ultra Dynamic)
-        ctx.lineCap = "round";
-        for (const p of particles) {
-            p.angle += p.speed;
-
-            const dx = p.x - mouse.x;
-            const dy = p.y - mouse.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-
-            let interactionX = 0;
-            let interactionY = 0;
-            if (dist < 300) {
-                const force = (300 - dist) / 300;
-                interactionX = (dx / dist) * force * 20;
-                interactionY = (dy / dist) * force * 20;
+                this.x -= directionX;
+                this.y -= directionY;
+            } else {
+                // Return to base flow (simple physics)
+                if (this.x !== this.baseX) {
+                    const dx = this.x - this.baseX;
+                    this.x -= dx * 0.03;
+                }
+                if (this.y !== this.baseY) {
+                    const dy = this.y - this.baseY;
+                    this.y -= dy * 0.03;
+                }
             }
 
-            const offsetX = (mouse.x - width / 2) * p.depth * -1;
-            const offsetY = (mouse.y - height / 2) * p.depth * -1;
+            // Continue base movement
+            this.x += this.vx;
+            this.y += this.vy;
+            this.baseX += this.vx;
+            this.baseY += this.vy;
 
-            const drawX = p.x + offsetX + interactionX + Math.cos(p.angle) * 3;
-            const drawY = p.y + offsetY + interactionY + Math.sin(p.angle) * 3;
-
-            // Use particle's own color
-            ctx.lineWidth = 1.0;
-            ctx.globalAlpha = p.opacity;
-            ctx.strokeStyle = p.color;
-
-            // Dynamic length
-            const dynamicLength =
-                p.length * (1 + (interactionX !== 0 ? 0.5 : 0));
-
-            ctx.beginPath();
-            ctx.moveTo(drawX, drawY);
-            ctx.lineTo(
-                drawX + Math.cos(p.angle) * dynamicLength,
-                drawY + Math.sin(p.angle) * dynamicLength,
-            );
-            ctx.stroke();
-            ctx.globalAlpha = 1.0; // Reset
-
-            // Screen Wrap
-            if (p.x < -200) p.x = width + 200;
-            if (p.x > width + 200) p.x = -200;
-            if (p.y < -200) p.y = height + 200;
-            if (p.y > height + 200) p.y = -200;
+            // Wrap around screen
+            if (this.x < 0) {
+                this.x = width;
+                this.baseX = width;
+            }
+            if (this.x > width) {
+                this.x = 0;
+                this.baseX = 0;
+            }
+            if (this.y < 0) {
+                this.y = height;
+                this.baseY = height;
+            }
+            if (this.y > height) {
+                this.y = 0;
+                this.baseY = 0;
+            }
         }
 
-        animationFrame = requestAnimationFrame(draw);
+        draw() {
+            if (!ctx) return;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle =
+                appState.settings.theme === "dark" ? DARK_COLOR : LIGHT_COLOR;
+            ctx.fill();
+        }
     }
 
     onMount(() => {
+        if (!canvas) return;
         ctx = canvas.getContext("2d");
-        resize();
-        window.addEventListener("resize", resize);
+        if (!ctx) return;
 
-        const moveHandler = (e: MouseEvent) => {
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+
+        const resize = () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            // Re-init particles on resize to prevent clustering
+            particles.length = 0;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(new Particle(width, height));
+            }
+        };
+
+        window.addEventListener("resize", resize);
+        resize();
+
+        const handleMouseMove = (e: MouseEvent) => {
             mouse.targetX = e.clientX;
             mouse.targetY = e.clientY;
         };
-        window.addEventListener("mousemove", moveHandler);
+        window.addEventListener("mousemove", handleMouseMove);
 
-        mouse.x = mouse.targetX = window.innerWidth / 2;
-        mouse.y = mouse.targetY = window.innerHeight / 2;
+        const animate = () => {
+            // Lerp mouse position for smooth trailing
+            mouse.currentX += (mouse.targetX - mouse.currentX) * 0.08;
+            mouse.currentY += (mouse.targetY - mouse.currentY) * 0.08;
 
-        draw();
+            ctx?.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update(width, height);
+                particles[i].draw();
+
+                // Draw connections
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < CONNECT_DISTANCE) {
+                        // Opacity based on distance
+                        const opacity = 1 - distance / CONNECT_DISTANCE;
+                        if (!ctx) break;
+                        ctx.beginPath();
+
+                        // Gradient line for depth
+                        // const gradient = ctx.createLinearGradient(particles[i].x, particles[i].y, particles[j].x, particles[j].y);
+                        // gradient.addColorStop(0, appState.settings.theme === 'dark' ? 'rgba(192, 132, 252, ' + opacity * 0.2 + ')' : 'rgba(168, 85, 247, ' + opacity * 0.2 + ')');
+                        // gradient.addColorStop(1, appState.settings.theme === 'dark' ? 'rgba(148, 163, 184, ' + opacity * 0.2 + ')' : 'rgba(100, 116, 139, ' + opacity * 0.2 + ')');
+
+                        // Simple color for performance
+                        ctx.strokeStyle =
+                            appState.settings.theme === "dark"
+                                ? `rgba(255, 255, 255, ${opacity * 0.25})`
+                                : `rgba(0, 0, 0, ${opacity * 0.15})`;
+                        ctx.lineWidth = 1;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            animationFrame = requestAnimationFrame(animate);
+        };
+
+        animate();
 
         return () => {
             window.removeEventListener("resize", resize);
-            window.removeEventListener("mousemove", moveHandler);
+            window.removeEventListener("mousemove", handleMouseMove);
             cancelAnimationFrame(animationFrame);
         };
     });
 </script>
 
 <div
-    class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none transition-colors duration-1000 bg-gradient-to-br from-rose-50/60 via-neutral-50 to-sky-50/60 dark:from-[#050505] dark:to-[#111116]"
+    class="fixed inset-0 z-[-1] overflow-hidden bg-[#f0f2f5] dark:bg-black transition-colors duration-700"
 >
-    <canvas bind:this={canvas} class="block w-full h-full"></canvas>
-
-    <!-- Heavy Grain Overlay -->
+    <!-- Liquid Blobs (Ambient Layer) -->
     <div
-        class="absolute inset-0 opacity-[0.05] dark:opacity-[0.08] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=')]"
+        class="absolute top-0 -left-4 w-96 h-96 bg-purple-300 dark:bg-purple-900/50 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-3xl opacity-60 animate-blob"
+    ></div>
+    <div
+        class="absolute top-0 -right-4 w-96 h-96 bg-yellow-200 dark:bg-blue-900/50 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-3xl opacity-60 animate-blob animation-delay-2000"
+    ></div>
+    <div
+        class="absolute -bottom-8 left-20 w-96 h-96 bg-pink-300 dark:bg-indigo-900/50 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-3xl opacity-60 animate-blob animation-delay-4000"
+    ></div>
+
+    <!-- Extra dynamic blob for interaction hint or richness -->
+    <div
+        class="absolute bottom-1/4 right-1/4 w-80 h-80 bg-cyan-200 dark:bg-cyan-900/40 rounded-full mix-blend-multiply dark:mix-blend-normal filter blur-[80px] opacity-50 animate-blob animation-delay-6000"
+    ></div>
+
+    <!-- Antigravity Particles (Interactive Layer) -->
+    <canvas
+        bind:this={canvas}
+        class="absolute inset-0 pointer-events-none opacity-60 dark:opacity-80"
+    ></canvas>
+
+    <!-- Heavy Grain Overlay for Texture -->
+    <div
+        class="absolute inset-0 opacity-[0.06] dark:opacity-[0.08] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIiB4PSIwIiB5PSIwIj48ZmVUdXJidWxlbmNlIGJhc2VGcmVxdWVuY3k9Ii43NSIgc3RpdGNoVGlsZXM9InN0aXRjaCIgdHlwZT0iZnJhY3RhbE5vaXNlIi8+PGZlQ29sb3JNYXRyaXggdHlwZT0ic2F0dXJhdGUiIHZhbHVlcz0iMCIvPjwvZmlsdGVyPjxwYXRoIGQ9Ik0wIDBoMzAwdjMwMEgweiIgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuMDUiLz48L3N2Zz4=')]"
     ></div>
 </div>
 
 <style>
-    canvas {
-        filter: blur(0.4px);
+    /* 
+      We define animation delay classes here since Tailwind doesn't have them by default 
+      without a plugin.
+    */
+    .animation-delay-2000 {
+        animation-delay: 2s;
+    }
+    .animation-delay-4000 {
+        animation-delay: 4s;
+    }
+    .animation-delay-6000 {
+        animation-delay: 6s;
     }
 </style>
