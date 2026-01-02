@@ -5,8 +5,11 @@
     import { chatCompletion, type Message } from "../lib/llm";
     import { estimateTokens } from "../lib/utils";
     import ReferenceModal from "./ReferenceModal.svelte";
+    import HistorySidebar from "./HistorySidebar.svelte";
+    import { syncUpload } from "../lib/gistsync";
     import {
         Wand2,
+        Menu,
         Copy,
         Check,
         Loader2,
@@ -35,6 +38,7 @@
 
     // Reference Modal - now using external component
     let showRefModal = $state(false);
+    let showHistorySidebar = $state(false);
 
     let t = $derived(translations[appState.settings.language]);
     let pillX = $state(50);
@@ -127,6 +131,47 @@
             error = e.message || "Optimization failed";
         } finally {
             isOptimizing = false;
+            // Save to history on success if no error and output exists
+            if (!error && outputPrompt) {
+                const historyItem = {
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                    input: inputPrompt,
+                    output: outputPrompt,
+                    model: appState.settings.targetModel,
+                    provider: provider,
+                };
+                appState.settings.history[historyItem.model].unshift(
+                    historyItem,
+                );
+
+                // Keep only last 50 items per model to prevent localStorage bloat
+                if (appState.settings.history[historyItem.model].length > 50) {
+                    appState.settings.history[historyItem.model] =
+                        appState.settings.history[historyItem.model].slice(
+                            0,
+                            50,
+                        );
+                }
+
+                // Auto Sync Trigger (with 30s debounce to avoid rate limiting)
+                const syncSettings = appState.settings.sync;
+                if (syncSettings.autoSync && syncSettings.githubToken) {
+                    const timeSinceLastSync =
+                        Date.now() - (syncSettings.lastSyncTime || 0);
+                    if (timeSinceLastSync > 30000) {
+                        // 30 seconds debounce
+                        console.log("[AutoSync] Triggering sync...");
+                        syncUpload().catch((err) =>
+                            console.error("Auto Sync Failed", err),
+                        );
+                    } else {
+                        console.log(
+                            `[AutoSync] Skipped, last sync was ${Math.round(timeSinceLastSync / 1000)}s ago`,
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -160,6 +205,35 @@
                 <span
                     class="w-3 h-3 rounded-full bg-[#00ca4e] hover:brightness-110 transition-all cursor-pointer"
                 ></span>
+            </div>
+
+            <div class="flex items-center gap-2 relative">
+                <button
+                    class="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors relative z-10"
+                    onclick={() => {
+                        showHistorySidebar = true;
+                        appState.settings.hasSeenHistoryGuide = true;
+                    }}
+                    title={t.history}
+                >
+                    <Menu class="size-5" />
+                </button>
+                {#if !appState.settings.hasSeenHistoryGuide}
+                    <!-- Pulsing Ring -->
+                    <span
+                        class="absolute inset-0 rounded-full bg-purple-500/30 animate-ping pointer-events-none"
+                    ></span>
+
+                    <!-- Tooltip -->
+                    <div
+                        class="absolute top-full right-[-10px] mt-3 px-3 py-1.5 bg-purple-600 text-white text-[10px] font-bold rounded-lg whitespace-nowrap shadow-lg animate-bounce pointer-events-none z-20"
+                    >
+                        <div
+                            class="absolute -top-1 right-3 w-2 h-2 bg-purple-600 rotate-45"
+                        ></div>
+                        {t.historyGuide}
+                    </div>
+                {/if}
             </div>
 
             <div
@@ -571,6 +645,13 @@
 
 <!-- Custom Reference Modal --><!-- Reference Modal Component -->
 <ReferenceModal bind:show={showRefModal} />
+<HistorySidebar
+    bind:show={showHistorySidebar}
+    onRestore={(item) => {
+        inputPrompt = item.input;
+        outputPrompt = item.output;
+    }}
+/>
 
 <style>
     /* Glass Pill Styles */
@@ -1044,7 +1125,7 @@
         background-color: transparent;
         border: none;
         border-radius: var(--border_radius);
-        transform: scale(calc(1 + (var(--active, 0) * 0.1)));
+        transform: scale(calc(1 + (var(--active, 0) * 0.05)));
         transition: transform var(--transtion);
     }
 
@@ -1068,7 +1149,7 @@
             inset 0 0.5px hsl(0, 0%, 100%),
             inset 0 -1px 2px 0 hsl(0, 0%, 0%),
             0px 4px 10px -4px hsla(0 0% 0% / calc(1 - var(--active, 0))),
-            0 0 0 calc(var(--active, 0) * 0.375rem) hsl(260 97% 50% / 0.75);
+            0 0 0 calc(var(--active, 0) * 0.2rem) hsl(260 97% 50% / 0.4);
         transition: all var(--transtion);
         z-index: 0;
     }
@@ -1081,7 +1162,7 @@
         transform: translate(-50%, -50%);
         width: 100%;
         height: 100%;
-        background-color: hsla(260 97% 61% / 0.75);
+        background-color: hsla(260 97% 61% / 0.4);
         background-image: radial-gradient(
                 at 51% 89%,
                 hsla(266, 45%, 74%, 1) 0px,

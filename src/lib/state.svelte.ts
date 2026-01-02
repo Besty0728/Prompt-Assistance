@@ -1,5 +1,18 @@
 import { type Reference, DEFAULT_REFERENCES } from './references';
 
+export interface GistFile {
+    content: string;
+}
+
+export interface HistoryItem {
+    id: string;
+    timestamp: number;
+    input: string;
+    output: string;
+    model: 'claude' | 'gpt' | 'gemini';
+    provider: 'openai' | 'anthropic' | 'gemini' | 'custom';
+}
+
 export interface AppSettings {
     openaiKey: string;
     anthropicKey: string;
@@ -41,6 +54,19 @@ export interface AppSettings {
     };
     customIcon?: string;
     references: Reference[];
+    history: {
+        claude: HistoryItem[];
+        gpt: HistoryItem[];
+        gemini: HistoryItem[];
+    };
+    hasSeenHistoryGuide: boolean;
+    sync: {
+        githubToken: string;
+        gistId: string;
+        lastSyncTime: number;
+        autoSync: boolean;
+        authScheme: 'Bearer' | 'token';
+    };
 }
 
 class AppState {
@@ -85,6 +111,19 @@ class AppState {
         },
         customIcon: '',
         references: [...DEFAULT_REFERENCES],
+        history: {
+            claude: [],
+            gpt: [],
+            gemini: [],
+        },
+        hasSeenHistoryGuide: false,
+        sync: {
+            githubToken: '',
+            gistId: '',
+            lastSyncTime: 0,
+            autoSync: false,
+            authScheme: 'Bearer',
+        },
     });
 
     constructor() {

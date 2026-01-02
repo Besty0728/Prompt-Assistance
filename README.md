@@ -18,6 +18,8 @@
 - **⚡ Real-time Streaming Response**: Robust streaming output based on SSE for an exceptional typewriter-like interactive experience.
 - **🎨 Premium Visual Design**: Featuring Glassmorphism and dynamic lighting effects, perfectly adapted for both dark and light modes.
 - **🛠️ Highly Customizable**: Fully customizable endpoint suffixes to adapt to various API proxies and relay services.
+- **📜 Optimization History**: Automatically saves optimization history for each model, allowing easy restoration and review.
+- **☁️ Cloud Sync**: Sync your optimization history across devices using GitHub Gist (requires a GitHub PAT with `gist` scope).
 - **☁️ Deployment Friendly**: Native support for modern edge computing platforms like Cloudflare Workers, EdgeOne Pages, and Vercel.
 
 ---

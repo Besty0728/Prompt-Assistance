@@ -21,7 +21,19 @@
     import openaiIcon from "../assets/icons/openai-2.svg";
     import anthropicIcon from "../assets/icons/claude-color.svg";
     import geminiIcon from "../assets/icons/gemini-color.svg";
-    import { Upload, RefreshCw, ChevronDown } from "lucide-svelte";
+    import {
+        Upload,
+        Download,
+        RefreshCw,
+        ChevronDown,
+        Cloud,
+    } from "lucide-svelte";
+    import {
+        findGist,
+        syncUpload,
+        syncDownload,
+        validateToken,
+    } from "../lib/gistsync";
 
     let { onClose } = $props();
 
@@ -35,6 +47,86 @@
     let isFetching = $state(false);
     let showModelDropdown = $state(false);
     let showSuffixDropdown = $state(false);
+    let activeTab = $state<
+        "openai" | "anthropic" | "gemini" | "custom" | "sync"
+    >(settings.provider);
+    let syncStatus = $state<
+        "idle" | "checking" | "uploading" | "downloading" | "success" | "error"
+    >("idle");
+    let syncMsg = $state("");
+
+    async function handleSyncTest() {
+        syncStatus = "checking";
+        const validScheme = await validateToken(settings.sync.githubToken);
+
+        if (validScheme) {
+            // Save the working auth scheme
+            settings.sync.authScheme = validScheme;
+
+            syncStatus = "success";
+            syncMsg = translations[settings.language].connected;
+
+            // Try to find existing gist using the valid scheme
+            const id = await findGist(settings.sync.githubToken, validScheme);
+            if (id) {
+                settings.sync.gistId = id;
+            }
+
+            // Immediately persist credentials to appState for cross-session persistence
+            appState.settings.sync.githubToken = settings.sync.githubToken;
+            appState.settings.sync.authScheme = validScheme;
+            appState.settings.sync.gistId = settings.sync.gistId;
+        } else {
+            syncStatus = "error";
+            syncMsg = translations[settings.language].disconnected;
+        }
+    }
+
+    async function handleUpload() {
+        syncStatus = "uploading";
+
+        // Save current sync credentials and history to appState first
+        appState.settings.sync.githubToken = settings.sync.githubToken;
+        appState.settings.sync.gistId = settings.sync.gistId;
+        appState.settings.sync.authScheme = settings.sync.authScheme;
+        appState.settings.history = settings.history;
+
+        // Upload from appState (global)
+        const success = await syncUpload(); // No argument = uses appState
+
+        if (success) {
+            // Refresh local settings to reflect any updates (gistId, lastSyncTime)
+            settings.sync.gistId = appState.settings.sync.gistId;
+            settings.sync.lastSyncTime = appState.settings.sync.lastSyncTime;
+            syncStatus = "success";
+            syncMsg = translations[settings.language].uploadSuccess;
+        } else {
+            syncStatus = "error";
+            syncMsg = translations[settings.language].syncFailed;
+        }
+    }
+
+    async function handleDownload() {
+        syncStatus = "downloading";
+
+        // First, save current sync credentials to appState so syncDownload can use them
+        appState.settings.sync.githubToken = settings.sync.githubToken;
+        appState.settings.sync.gistId = settings.sync.gistId;
+        appState.settings.sync.authScheme = settings.sync.authScheme;
+
+        // Download directly to appState (global) for immediate effect
+        const success = await syncDownload(); // No argument = uses appState
+
+        if (success) {
+            // Refresh local settings clone to reflect downloaded changes
+            settings.history = appState.settings.history;
+            syncStatus = "success";
+            syncMsg = translations[settings.language].downloadSuccess;
+        } else {
+            syncStatus = "error";
+            syncMsg = translations[settings.language].syncFailed;
+        }
+    }
 
     let testResults = $state<
         Record<
@@ -299,14 +391,14 @@
 
     function save() {
         // Atomic update: replace entire appState.settings with our local copy
-        appState.settings = deepClone(settings);
+        appState.settings = deepClone(settings) as AppSettings;
         onClose();
     }
 
     let t = $derived(translations[settings.language]);
 
     const providers: {
-        id: "openai" | "anthropic" | "gemini" | "custom";
+        id: "openai" | "anthropic" | "gemini" | "custom" | "sync";
         name: string;
         icon: any;
         color: string;
@@ -338,6 +430,13 @@
             name: "Custom",
             icon: Command,
             color: "from-purple-400 to-pink-600",
+            isSvg: false,
+        },
+        {
+            id: "sync",
+            name: "Cloud Sync",
+            icon: Cloud,
+            color: "from-sky-400 to-blue-500",
             isSvg: false,
         },
     ];
@@ -457,15 +556,16 @@
                 {#each providers as p, i}
                     <button
                         onclick={() => {
-                            settings.provider = p.id as any;
+                            activeTab = p.id;
+                            if (p.id !== "sync") settings.provider = p.id;
                         }}
-                        class="group relative flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border transition-all duration-300 {settings.provider ===
+                        class="group relative flex flex-col items-center justify-center gap-3 p-6 rounded-3xl border transition-all duration-300 {activeTab ===
                         p.id
                             ? 'bg-white dark:bg-white/10 border-black/5 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] scale-[1.02]'
                             : 'bg-white/40 dark:bg-white/5 border-transparent hover:bg-white/60 dark:hover:bg-white/10 hover:border-black/5 dark:hover:border-white/5 hover:scale-[1.01]'}"
                         in:fly={{ y: 20, duration: 400, delay: i * 50 }}
                     >
-                        {#if settings.provider === p.id}
+                        {#if activeTab === p.id}
                             <div
                                 class="absolute inset-0 rounded-3xl bg-gradient-to-br {p.color} opacity-[0.03] dark:opacity-[0.1]"
                                 in:fade={{ duration: 300 }}
@@ -485,7 +585,7 @@
                         >
                             {#if p.isSvg}
                                 <img src={p.icon} alt={p.name} class="size-6" />
-                            {:else if settings.customIcon && p.id === "custom"}
+                            {:else if settings.customIcon && p.id === "custom" && activeTab === "custom"}
                                 <img
                                     src={settings.customIcon}
                                     alt="Custom"
@@ -498,7 +598,7 @@
                             {/if}
                         </div>
                         <span
-                            class="text-sm font-bold {settings.provider === p.id
+                            class="text-sm font-bold {activeTab === p.id
                                 ? 'text-neutral-900 dark:text-white'
                                 : 'text-neutral-600 dark:text-neutral-500'}"
                         >
@@ -518,12 +618,20 @@
                 <div
                     class="flex size-6 items-center justify-center rounded-lg bg-black/5 dark:bg-white/10 text-neutral-600 dark:text-neutral-400"
                 >
-                    <Cpu class="size-3.5" />
+                    {#if activeTab === "sync"}
+                        <Cloud class="size-3.5" />
+                    {:else}
+                        <Cpu class="size-3.5" />
+                    {/if}
                 </div>
                 <h3
                     class="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-widest"
                 >
-                    {t.apiKeys} & {t.modelName}
+                    {#if activeTab === "sync"}
+                        {t.sync}
+                    {:else}
+                        {t.apiKeys} & {t.modelName}
+                    {/if}
                 </h3>
             </div>
 
@@ -540,7 +648,7 @@
                 </div>
 
                 <div class="p-6 md:p-8 space-y-6">
-                    {#if settings.provider === "openai"}
+                    {#if activeTab === "openai"}
                         <div
                             class="space-y-5"
                             in:fly={{ y: 10, duration: 300 }}
@@ -662,7 +770,7 @@
                                                     : ''}"
                                             />
                                         </button>
-                                        {#if showModelDropdown && settings.provider === "openai" && settings.availableModels.openai.length > 0}
+                                        {#if showModelDropdown && activeTab === "openai" && settings.availableModels.openai.length > 0}
                                             <div
                                                 class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                                 in:fly={{
@@ -746,7 +854,7 @@
                                     >
                                         <ChevronDown class="size-4" />
                                     </button>
-                                    {#if showSuffixDropdown && settings.provider === "openai"}
+                                    {#if showSuffixDropdown && activeTab === "openai"}
                                         <div
                                             class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                             in:fly={{
@@ -771,7 +879,7 @@
                                 </div>
                             </div>
                         </div>
-                    {:else if settings.provider === "anthropic"}
+                    {:else if activeTab === "anthropic"}
                         <div
                             class="space-y-5"
                             in:fly={{ y: 10, duration: 300 }}
@@ -896,7 +1004,7 @@
                                                     : ''}"
                                             />
                                         </button>
-                                        {#if showModelDropdown && settings.provider === "anthropic" && settings.availableModels.anthropic.length > 0}
+                                        {#if showModelDropdown && activeTab === "anthropic" && settings.availableModels.anthropic.length > 0}
                                             <div
                                                 class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                                 in:fly={{
@@ -980,7 +1088,7 @@
                                     >
                                         <ChevronDown class="size-4" />
                                     </button>
-                                    {#if showSuffixDropdown && settings.provider === "anthropic"}
+                                    {#if showSuffixDropdown && activeTab === "anthropic"}
                                         <div
                                             class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                             in:fly={{
@@ -1005,7 +1113,7 @@
                                 </div>
                             </div>
                         </div>
-                    {:else if settings.provider === "gemini"}
+                    {:else if activeTab === "gemini"}
                         <div
                             class="space-y-5"
                             in:fly={{ y: 10, duration: 300 }}
@@ -1127,7 +1235,7 @@
                                                     : ''}"
                                             />
                                         </button>
-                                        {#if showModelDropdown && settings.provider === "gemini" && settings.availableModels.gemini.length > 0}
+                                        {#if showModelDropdown && activeTab === "gemini" && settings.availableModels.gemini.length > 0}
                                             <div
                                                 class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                                 in:fly={{
@@ -1211,7 +1319,7 @@
                                     >
                                         <ChevronDown class="size-4" />
                                     </button>
-                                    {#if showSuffixDropdown && settings.provider === "gemini"}
+                                    {#if showSuffixDropdown && activeTab === "gemini"}
                                         <div
                                             class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                             in:fly={{
@@ -1236,7 +1344,7 @@
                                 </div>
                             </div>
                         </div>
-                    {:else if settings.provider === "custom"}
+                    {:else if activeTab === "custom"}
                         <div
                             class="space-y-5"
                             in:fly={{ y: 10, duration: 300 }}
@@ -1362,7 +1470,7 @@
                                                     : ''}"
                                             />
                                         </button>
-                                        {#if showModelDropdown && settings.provider === "custom" && settings.availableModels.custom.length > 0}
+                                        {#if showModelDropdown && activeTab === "custom" && settings.availableModels.custom.length > 0}
                                             <div
                                                 class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                                 in:fly={{
@@ -1486,7 +1594,7 @@
                                     >
                                         <ChevronDown class="size-4" />
                                     </button>
-                                    {#if showSuffixDropdown && settings.provider === "custom"}
+                                    {#if showSuffixDropdown && activeTab === "custom"}
                                         <div
                                             class="absolute top-full mt-2 w-full max-h-60 overflow-y-auto bg-white/90 dark:bg-black/90 backdrop-blur-xl border border-neutral-200 dark:border-white/10 rounded-2xl shadow-2xl z-50 p-1 flex flex-col gap-0.5 custom-scrollbar"
                                             in:fly={{
@@ -1510,6 +1618,142 @@
                                     {/if}
                                 </div>
                             </div>
+                        </div>
+                    {:else if activeTab === "sync"}
+                        <div
+                            class="space-y-6"
+                            in:fly={{ y: 10, duration: 300 }}
+                        >
+                            <!-- Token Input -->
+                            <div class="group relative">
+                                <div
+                                    class="flex items-center justify-between pl-1 mb-1.5"
+                                >
+                                    <label
+                                        class="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest transition-colors group-focus-within:text-sky-600"
+                                    >
+                                        {t.githubToken}
+                                    </label>
+                                    <div class="flex items-center gap-2">
+                                        {#if syncStatus !== "idle"}
+                                            <span
+                                                class="text-[9px] font-bold uppercase tracking-wider {syncStatus ===
+                                                'success'
+                                                    ? 'text-green-500'
+                                                    : syncStatus === 'error'
+                                                      ? 'text-red-500'
+                                                      : 'text-neutral-400'}"
+                                            >
+                                                {syncMsg || syncStatus}
+                                            </span>
+                                        {/if}
+                                        <button
+                                            onclick={handleSyncTest}
+                                            disabled={!settings.sync
+                                                .githubToken}
+                                            class="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 transition-all disabled:opacity-50"
+                                        >
+                                            {t.testConnection}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <input
+                                        type={showKey["gh"]
+                                            ? "text"
+                                            : "password"}
+                                        bind:value={settings.sync.githubToken}
+                                        placeholder={t.tokenPlaceholder}
+                                        class="w-full bg-neutral-100 dark:bg-black/40 border border-transparent focus:border-sky-500/30 focus:bg-white dark:focus:bg-black/60 rounded-2xl py-3.5 pl-5 pr-12 text-sm font-bold text-neutral-900 dark:text-white placeholder-neutral-400 focus:outline-none focus:ring-4 focus:ring-sky-500/10 transition-all duration-300"
+                                    />
+                                    <button
+                                        onclick={() => toggleKey("gh")}
+                                        class="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/10 transition-all"
+                                    >
+                                        {#if showKey["gh"]}<EyeOff
+                                                class="size-4"
+                                            />{:else}<Eye class="size-4" />{/if}
+                                    </button>
+                                </div>
+                                <p class="mt-2 text-xs text-neutral-400 pl-1">
+                                    {t.tokenHelp}
+                                    <a
+                                        href="https://github.com/settings/tokens"
+                                        target="_blank"
+                                        class="text-sky-500 hover:underline"
+                                        >Get Token</a
+                                    >
+                                </p>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <button
+                                    onclick={handleUpload}
+                                    disabled={!settings.sync.githubToken}
+                                    class="flex items-center justify-center gap-2 p-4 rounded-2xl bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    <Upload
+                                        class="size-5 text-neutral-600 dark:text-neutral-300"
+                                    />
+                                    <span
+                                        class="text-sm font-bold text-neutral-700 dark:text-neutral-200"
+                                        >{t.upload}</span
+                                    >
+                                </button>
+                                <button
+                                    onclick={handleDownload}
+                                    disabled={!settings.sync.githubToken}
+                                    class="flex items-center justify-center gap-2 p-4 rounded-2xl bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    <Download
+                                        class="size-5 text-neutral-600 dark:text-neutral-300"
+                                    />
+                                    <span
+                                        class="text-sm font-bold text-neutral-700 dark:text-neutral-200"
+                                        >{t.download}</span
+                                    >
+                                </button>
+                            </div>
+
+                            <!-- Auto Sync Toggle -->
+                            <div
+                                class="flex items-center justify-between p-4 rounded-2xl bg-neutral-100/50 dark:bg-white/5 border border-transparent hover:border-sky-500/20 transition-all"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="p-2 rounded-lg bg-sky-500/10 text-sky-600"
+                                    >
+                                        <RefreshCw class="size-4" />
+                                    </div>
+                                    <span
+                                        class="text-sm font-bold text-neutral-700 dark:text-neutral-200"
+                                        >{t.autoSync}</span
+                                    >
+                                </div>
+                                <label
+                                    class="relative inline-flex items-center cursor-pointer"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        bind:checked={settings.sync.autoSync}
+                                        class="sr-only peer"
+                                    />
+                                    <div
+                                        class="w-9 h-5 bg-neutral-200 dark:bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500"
+                                    ></div>
+                                </label>
+                            </div>
+
+                            {#if settings.sync.lastSyncTime}
+                                <div
+                                    class="text-center text-[10px] text-neutral-400 font-mono"
+                                >
+                                    {t.lastSync}: {new Date(
+                                        settings.sync.lastSyncTime,
+                                    ).toLocaleString()}
+                                </div>
+                            {/if}
                         </div>
                     {/if}
                 </div>
