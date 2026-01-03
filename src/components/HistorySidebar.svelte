@@ -63,7 +63,7 @@
 
     <!-- Sidebar Drawer -->
     <div
-        class="fixed top-0 left-0 h-full w-80 sm:w-96 z-50 flex flex-col bg-white/80 dark:bg-[#121212]/80 backdrop-blur-2xl border-r border-white/20 dark:border-white/5 shadow-2xl"
+        class="fixed top-0 left-0 h-full w-full max-w-[85vw] sm:max-w-sm sm:w-96 z-50 flex flex-col bg-white/80 dark:bg-[#121212]/80 backdrop-blur-2xl border-r border-white/20 dark:border-white/5 shadow-2xl"
         transition:fly={{ x: -100, duration: 400, opacity: 1 }}
         onclick={(e) => e.stopPropagation()}
     >

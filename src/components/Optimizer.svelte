@@ -187,15 +187,17 @@
 </script>
 
 <div
-    class="w-full h-full flex flex-col bg-[var(--glass-surface)] backdrop-blur-3xl saturate-150 border border-[var(--glass-border)] rounded-[40px] overflow-hidden shadow-[var(--glass-shadow)] transition-all duration-700"
+    class="w-full h-full flex flex-col bg-[var(--glass-surface)] backdrop-blur-3xl saturate-150 border border-[var(--glass-border)] rounded-2xl md:rounded-[40px] overflow-hidden shadow-[var(--glass-shadow)] transition-all duration-700"
 >
     <!-- Inner Header -->
     <div
-        class="shrink-0 h-20 px-8 flex items-center justify-between border-b border-[var(--glass-border)] bg-white/5 dark:bg-black/5"
+        class="shrink-0 h-auto py-2 px-3 md:h-16 md:p-0 md:px-6 flex flex-col md:flex-row gap-2 md:gap-0 items-center justify-between border-b border-[var(--glass-border)] bg-white/5 dark:bg-black/5"
     >
-        <div class="flex items-center gap-8">
-            <!-- macOS Traffic Lights -->
-            <div class="flex items-center gap-2">
+        <div
+            class="flex flex-wrap justify-between w-full md:w-auto items-center gap-2 md:gap-4"
+        >
+            <!-- macOS Traffic Lights (Hidden on Mobile/Tablet Landscape, Show on LG) -->
+            <div class="hidden lg:flex items-center gap-2">
                 <span
                     class="w-3 h-3 rounded-full bg-[#ff605c] hover:brightness-110 transition-all cursor-pointer"
                 ></span>
@@ -223,21 +225,12 @@
                     <span
                         class="absolute inset-0 rounded-full bg-purple-500/30 animate-ping pointer-events-none"
                     ></span>
-
-                    <!-- Tooltip -->
-                    <div
-                        class="absolute top-full right-[-10px] mt-3 px-3 py-1.5 bg-purple-600 text-white text-[10px] font-bold rounded-lg whitespace-nowrap shadow-lg animate-bounce pointer-events-none z-20"
-                    >
-                        <div
-                            class="absolute -top-1 right-3 w-2 h-2 bg-purple-600 rotate-45"
-                        ></div>
-                        {t.historyGuide}
-                    </div>
                 {/if}
             </div>
 
+            <!-- Target Model Pill (Hidden on Mobile/Tablet Landscape, Show on LG) -->
             <div
-                class="glass-pill group cursor-default"
+                class="glass-pill group cursor-default hidden lg:flex"
                 onmousemove={handlePillMouseMove}
                 style="--x: {pillX}%; --y: {pillY}%;"
             >
@@ -254,7 +247,9 @@
             </div>
 
             <!-- Radio Model Selector -->
-            <div class="radio-inputs">
+            <div
+                class="radio-inputs w-full flex-1 md:w-auto md:flex-none order-last md:order-none mt-1 md:mt-0"
+            >
                 {#each [{ id: "claude", icon: "/icons/claude-color.svg" }, { id: "gpt", icon: "/icons/openai-2.svg" }, { id: "gemini", icon: "/icons/gemini-color.svg" }] as target}
                     <label class="radio">
                         <input
@@ -264,13 +259,14 @@
                                 target.id}
                             onchange={() => setTarget(target.id as ModelType)}
                         />
-                        <span class="name">
+                        <span class="name !px-2.5 !py-1.5 md:!px-4 md:!py-2">
                             <img
                                 src={target.icon}
                                 alt={target.id}
-                                class="size-5 object-contain"
+                                class="size-4 md:size-5 object-contain"
                             />
-                            <span class="capitalize font-semibold"
+                            <span
+                                class="capitalize font-semibold text-xs md:text-sm"
                                 >{target.id}</span
                             >
                         </span>
@@ -279,7 +275,9 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-8">
+        <div
+            class="flex items-center w-full md:w-auto justify-end gap-2 md:gap-4 lg:gap-8"
+        >
             <div class="flex flex-col items-end hidden xl:flex">
                 <span
                     class="text-[10px] uppercase tracking-[0.4em] text-neutral-400 dark:text-neutral-600 font-black mb-1"
@@ -294,7 +292,7 @@
             <button
                 onclick={optimize}
                 disabled={isOptimizing || !inputPrompt.trim()}
-                class="sparkle-button"
+                class="sparkle-button !py-2 !px-4 md:!py-3.5 md:!px-6"
             >
                 <div class="dots_border"></div>
                 {#if isOptimizing}
@@ -348,13 +346,13 @@
         </div>
     {/if}
 
-    <div class="flex-1 flex flex-row min-h-0 overflow-hidden">
+    <div class="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
         <!-- INPUT SECTION -->
         <div
-            class="flex-1 flex flex-col min-h-0 border-r border-[var(--glass-border)]"
+            class="flex-1 flex flex-col min-h-0 border-b md:border-b-0 md:border-r border-[var(--glass-border)]"
         >
             <!-- Animated Input Area -->
-            <div class="p-8">
+            <div class="p-4 md:p-8">
                 <div class="form-control">
                     <input
                         type="text"
@@ -392,7 +390,7 @@
 
             <!-- Left Column Content (Reference Context Manager) -->
             <div
-                class="px-8 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden"
+                class="px-4 md:px-8 flex-1 min-h-0 flex flex-col gap-3 overflow-hidden"
             >
                 <div class="flex items-center justify-between">
                     <h3
@@ -588,7 +586,7 @@
                 </div>
             {:else}
                 <div
-                    class="flex-1 flex flex-col items-center justify-center gap-10 p-20 select-none bg-black/5"
+                    class="flex-1 flex flex-col items-center justify-center gap-6 md:gap-10 p-8 md:p-20 select-none bg-black/5"
                 >
                     <!-- Newton's Cradle Animation -->
                     <div class="newtons-cradle">
@@ -618,7 +616,7 @@
 
     <!-- UNIFIED FOOTER -->
     <div
-        class="shrink-0 h-10 border-t border-[var(--glass-border)] bg-gray-50/50 dark:bg-black/20 flex items-center px-8 justify-between text-[10px] uppercase tracking-widest font-black text-neutral-400 dark:text-neutral-500 select-none"
+        class="shrink-0 h-auto py-2 md:py-0 md:h-10 border-t border-[var(--glass-border)] bg-gray-50/50 dark:bg-black/20 flex flex-col md:flex-row gap-2 md:gap-0 items-center px-4 md:px-8 justify-between text-[10px] uppercase tracking-widest font-black text-neutral-400 dark:text-neutral-500 select-none"
     >
         <!-- Left Info -->
         <div class="flex items-center gap-4">

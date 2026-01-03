@@ -23,41 +23,45 @@
 <Background />
 
 <main
-  class="h-screen w-screen overflow-hidden flex flex-col text-neutral-800 dark:text-neutral-100 font-sans selection:bg-purple-500/30 relative transition-colors duration-500"
+  class="h-[100dvh] w-screen overflow-hidden flex flex-col text-neutral-800 dark:text-neutral-100 font-sans selection:bg-purple-500/30 relative transition-colors duration-500"
 >
   <!-- Floating Glass Header -->
   <nav
-    class="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center p-2 pr-3 rounded-full border border-[var(--glass-border)] bg-[var(--glass-surface)] backdrop-blur-md shadow-[var(--glass-shadow)] transition-all duration-300 hover:scale-[1.01]"
+    class="fixed top-2 md:top-4 left-1/2 -translate-x-1/2 z-50 flex items-center p-1.5 md:p-2 pr-2 md:pr-3 max-w-[95vw] overflow-x-auto rounded-full border border-[var(--glass-border)] bg-[var(--glass-surface)] backdrop-blur-md shadow-[var(--glass-shadow)] transition-all duration-300 hover:scale-[1.01]"
   >
     <!-- Title / Logo Component -->
-    <div class="flex items-center gap-3 px-4 group cursor-pointer select-none">
+    <div
+      class="flex items-center gap-2 md:gap-3 px-2 md:px-4 group cursor-pointer select-none shrink-0"
+    >
       <div
-        class="relative flex items-center justify-center p-2 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg shadow-purple-500/30 group-hover:rotate-12 transition-transform duration-500"
+        class="relative flex items-center justify-center p-1.5 md:p-2 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg shadow-purple-500/30 group-hover:rotate-12 transition-transform duration-500"
       >
-        <Sparkles class="size-5 text-white" />
+        <Sparkles class="size-4 md:size-5 text-white" />
         <div
           class="absolute inset-0 bg-white/30 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity"
         ></div>
       </div>
       <div class="flex flex-col">
         <h1
-          class="text-sm font-bold tracking-tight text-neutral-900 dark:text-white leading-none"
+          class="text-xs md:text-sm font-bold tracking-tight text-neutral-900 dark:text-white leading-none whitespace-nowrap"
         >
           {t.title}
         </h1>
         <span
-          class="text-[8px] uppercase tracking-[0.15em] font-bold text-neutral-500 dark:text-neutral-400 leading-none mt-0.5"
+          class="text-[6px] md:text-[8px] uppercase tracking-[0.15em] font-bold text-neutral-500 dark:text-neutral-400 leading-none mt-0.5 whitespace-nowrap"
           >AI OPTIMIZER</span
         >
       </div>
     </div>
 
-    <div class="w-px h-6 bg-black/10 dark:bg-white/10 mx-2"></div>
+    <div
+      class="w-px h-4 md:h-6 bg-black/10 dark:bg-white/10 mx-1 md:mx-2 shrink-0"
+    ></div>
 
     <!-- Actions -->
-    <div class="flex items-center gap-3">
+    <div class="flex items-center gap-2 md:gap-3 shrink-0">
       <!-- Animated Theme Switch (Restored) -->
-      <div class="scale-75 origin-center">
+      <div class="scale-[0.6] md:scale-75 origin-center">
         <label class="theme-switch">
           <input
             type="checkbox"
@@ -115,16 +119,16 @@
       <!-- Settings (Spinning Restored) -->
       <button
         onclick={() => (showSettings = true)}
-        class="settings-btn group p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 ml-1"
+        class="settings-btn group p-1.5 md:p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-neutral-500 dark:text-neutral-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-300 ml-1"
         aria-label="Open Settings"
       >
-        <SettingsIcon class="size-5" />
+        <SettingsIcon class="size-4 md:size-5" />
       </button>
     </div>
   </nav>
 
   <div
-    class="flex-1 w-full max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 pt-32 transition-all duration-500"
+    class="flex-1 w-full max-w-[1920px] mx-auto p-2 md:p-6 lg:p-8 pt-16 md:pt-24 lg:pt-28 transition-all duration-500 min-h-0"
   >
     <Optimizer />
   </div>
