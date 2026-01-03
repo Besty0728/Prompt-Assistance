@@ -172,3 +172,68 @@ pnpm build      # 生产构建
 - 点击背景或按 Escape 关闭
 - 验证：标题和内容都非空才能添加
 
+---
+
+## Smart URL Handling (API Endpoints)
+
+### 概述
+项目支持 OpenAI、Anthropic、Gemini 和 **Custom** 四种 Provider。Custom Provider 允许用户配置任意兼容 OpenAI API 的端点。
+
+### 智能 URL 构建逻辑
+
+**核心文件:**
+- `src/lib/llm.ts` - 实际 API 请求
+- `src/components/Settings.svelte` - `testConnection()` 和 `fetchModels()`
+
+**问题场景:**
+用户配置 `Base URL: https://api.siliconflow.cn` + `Suffix: /v1/chat/completions` 时，如果简单拼接会变成 `/v1/v1/...`。
+
+**解决方案:**
+
+1. **后缀解析:** 从 `/v1/chat/completions` 中提取版本前缀 `/v1`
+2. **去重逻辑:** 如果 Base URL 已包含该前缀，则不再追加
+3. **回退探测:** 如果 `/models` 失败，自动尝试 `/v1/models`
+
+```typescript
+// 示例：后缀解析
+suffix = suffix.replace(/\/chat\/completions\/?$/, ''); // "/v1/chat/completions" → "/v1"
+
+// 示例：去重
+if (baseClean.endsWith(`/${suffixClean}`)) {
+    url = `${baseClean}/models`;  // 不追加
+} else {
+    url = `${baseClean}/${suffixClean}/models`;  // 追加
+}
+```
+
+### 无 API Key 获取模型
+
+`fetchModels()` 支持在没有 API Key 的情况下请求模型列表：
+
+```typescript
+if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+}
+// 即使没有 Key，仍会发送请求（适用于本地代理或开放端点）
+```
+
+### Custom Provider 配置
+
+| 设置项 | 说明 |
+|--------|------|
+| `customKey` | API Key |
+| `baseUrls.custom` | Base URL (如 `https://api.siliconflow.cn`) |
+| `models.custom` | 模型 ID |
+| `endpointSuffixes.custom` | 端点后缀 (如 `/v1/chat/completions`) |
+| `useEndpointSuffixes.custom` | 是否启用后缀 |
+
+---
+
+## Provider 配置参考
+
+| Provider | 默认 Base URL | 默认后缀 | 测试端点 |
+|----------|---------------|----------|----------|
+| OpenAI | `https://api.openai.com/v1` | `/chat/completions` | `/models` |
+| Anthropic | `https://api.anthropic.com/v1` | `/messages` | POST `/messages` |
+| Gemini | `https://generativelanguage.googleapis.com/v1beta` | `:streamGenerateContent` | `/models?key=` |
+| Custom | 用户配置 | 用户配置 | `/models` (智能解析) |
