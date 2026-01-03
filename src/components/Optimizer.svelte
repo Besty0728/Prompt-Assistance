@@ -57,7 +57,9 @@
                 ? appState.settings.anthropicKey
                 : p === "gemini"
                   ? appState.settings.geminiKey
-                  : appState.settings.openaiKey;
+                  : p === "custom"
+                    ? appState.settings.customKey
+                    : appState.settings.openaiKey;
 
         const baseUrl = appState.settings.baseUrls[p] || "";
         const model = appState.settings.models[p] || "";

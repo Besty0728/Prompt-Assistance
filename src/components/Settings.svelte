@@ -152,32 +152,74 @@
                     (provider === "openai" ? "https://api.openai.com/v1" : "")
                 ).replace(/\/$/, "");
 
-                let url = baseUrl;
-                if (settings.useEndpointSuffixes[provider]) {
-                    const suffix =
-                        settings.endpointSuffixes[provider] || "/models";
-                    url = baseUrl.endsWith(suffix)
-                        ? baseUrl
-                        : `${baseUrl}${suffix.startsWith("/") ? "" : "/"}${suffix}`;
-                } else {
-                    url = `${baseUrl}/models`;
-                }
-
                 const key =
                     provider === "openai"
                         ? settings.openaiKey
                         : settings.customKey;
+                const headers: Record<string, string> = key
+                    ? { Authorization: `Bearer ${key}` }
+                    : {};
 
-                const res = await fetch(url, {
-                    headers: key ? { Authorization: `Bearer ${key}` } : {},
-                });
+                // Smart Strategy: Always test against /models (GET) rather than the chat suffix (POST)
+                let testUrl = `${baseUrl}/models`;
+
+                // Advanced Parse: If user put a suffix, try to extract useful base path segments (e.g. /v1)
+                if (
+                    settings.useEndpointSuffixes[provider] &&
+                    settings.endpointSuffixes[provider]
+                ) {
+                    let suffix = settings.endpointSuffixes[provider];
+                    // Remove common chat verbs to isolate the version prefix
+                    suffix = suffix
+                        .replace(/\/chat\/completions\/?$/, "")
+                        .replace(/\/messages\/?$/, "");
+
+                    // If there's anything left (like /v1), append it safely
+                    if (suffix && suffix !== "/") {
+                        const baseClean = baseUrl.replace(/\/+$/, "");
+                        const suffixClean = suffix
+                            .replace(/^\/+/, "")
+                            .replace(/\/+$/, "");
+
+                        // Smart Join Deduplication
+                        if (suffixClean) {
+                            if (baseClean.endsWith(`/${suffixClean}`)) {
+                                testUrl = `${baseClean}/models`;
+                            } else {
+                                testUrl = `${baseClean}/${suffixClean}/models`;
+                            }
+                        }
+                        // Fix potential double slashes
+                        testUrl = testUrl.replace(/([^:]\/)\/+/g, "$1");
+                    }
+                }
+
+                let res = await fetch(testUrl, { headers });
+
+                // Smart Fallback: If constructed URL fails, try strict /v1/models as last resort
+                if (
+                    !res.ok &&
+                    res.status === 404 &&
+                    !testUrl.includes("/v1/models")
+                ) {
+                    const fallbackUrl = `${baseUrl}/v1/models`.replace(
+                        /([^:]\/)\/+/g,
+                        "$1",
+                    );
+                    const resFallback = await fetch(fallbackUrl, { headers });
+                    if (resFallback.ok || resFallback.status !== 404) {
+                        res = resFallback;
+                        testUrl = fallbackUrl;
+                    }
+                }
+
                 if (res.ok) {
                     testResults[provider] = { status: "success" };
                 } else {
                     const txt = await res.text();
                     testResults[provider] = {
                         status: "error",
-                        message: `HTTP ${res.status}: ${txt.slice(0, 50)}...`,
+                        message: `HTTP ${res.status} (${testUrl}): ${txt.slice(0, 50)}...`,
                     };
                 }
             } else if (provider === "gemini") {
@@ -300,16 +342,47 @@
             let headers: Record<string, string> = {};
 
             if (provider === "openai" || provider === "custom") {
-                const baseUrl =
+                const baseUrl = (
                     settings.baseUrls[provider] ||
-                    (provider === "openai" ? "https://api.openai.com/v1" : "");
+                    (provider === "openai" ? "https://api.openai.com/v1" : "")
+                ).replace(/\/$/, "");
                 const apiKey =
                     provider === "openai"
                         ? settings.openaiKey
                         : settings.customKey;
 
+                // Smart URL construction with suffix parsing
                 url = `${baseUrl}/models`;
-                // Allow fetch without APi Key if baseUrl is present (for local proxies)
+
+                if (
+                    settings.useEndpointSuffixes[provider] &&
+                    settings.endpointSuffixes[provider]
+                ) {
+                    let suffix = settings.endpointSuffixes[provider];
+                    // Remove common chat verbs to isolate the version prefix
+                    suffix = suffix
+                        .replace(/\/chat\/completions\/?$/, "")
+                        .replace(/\/messages\/?$/, "");
+
+                    if (suffix && suffix !== "/") {
+                        const baseClean = baseUrl.replace(/\/+$/, "");
+                        const suffixClean = suffix
+                            .replace(/^\/+/, "")
+                            .replace(/\/+$/, "");
+
+                        // Smart Join Deduplication
+                        if (suffixClean) {
+                            if (baseClean.endsWith(`/${suffixClean}`)) {
+                                url = `${baseClean}/models`;
+                            } else {
+                                url = `${baseClean}/${suffixClean}/models`;
+                            }
+                        }
+                        url = url.replace(/([^:]\/)\/+/g, "$1");
+                    }
+                }
+
+                // Allow fetch without API Key if baseUrl is present (for local proxies)
                 if (apiKey) {
                     headers["Authorization"] = `Bearer ${apiKey}`;
                 }
@@ -324,7 +397,27 @@
 
             if (!url) throw new Error("Invalid configuration");
 
-            const res = await fetch(url, { headers });
+            let res = await fetch(url, { headers });
+
+            // Smart Fallback: If constructed URL fails, try /v1/models
+            if (
+                !res.ok &&
+                res.status === 404 &&
+                (provider === "openai" || provider === "custom") &&
+                !url.includes("/v1/models")
+            ) {
+                const baseUrl = (
+                    settings.baseUrls[provider] ||
+                    (provider === "openai" ? "https://api.openai.com/v1" : "")
+                ).replace(/\/$/, "");
+                const fallbackUrl = `${baseUrl}/v1/models`.replace(
+                    /([^:]\/)\/+/g,
+                    "$1",
+                );
+                res = await fetch(fallbackUrl, { headers });
+                if (res.ok) url = fallbackUrl;
+            }
+
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
             const data = await res.json();

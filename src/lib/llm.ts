@@ -40,7 +40,16 @@ async function streamOpenAI(
 
     if (shouldAddSuffix) {
         if (options.endpointSuffix) {
-            url = baseURL.endsWith(options.endpointSuffix) ? baseURL : `${baseURL}${options.endpointSuffix.startsWith('/') ? '' : '/'}${options.endpointSuffix}`;
+            // Smart join: prevents /v1/v1/chat/completions if base ends in /v1 and suffix starts with /v1
+            const baseClean = baseURL.replace(/\/+$/, '');
+            const suffixClean = options.endpointSuffix.replace(/^\/+/, '');
+
+            // Basic overlap check
+            if (baseClean.endsWith('/v1') && suffixClean.startsWith('v1/')) {
+                url = `${baseClean}/${suffixClean.substring(3)}`;
+            } else {
+                url = `${baseClean}/${suffixClean}`;
+            }
         } else {
             url = baseURL.endsWith('/chat/completions') ? baseURL : `${baseURL}/chat/completions`;
         }
@@ -62,7 +71,7 @@ async function streamOpenAI(
 
     if (!response.ok) {
         const err = await response.text();
-        throw new Error(`OpenAI API Error: ${err}`);
+        throw new Error(`API Error (${url}): ${err}`);
     }
 
     await parseSSE(response, (data) => {
