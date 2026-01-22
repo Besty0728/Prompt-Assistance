@@ -4,7 +4,13 @@
   import Optimizer from "./components/Optimizer.svelte";
   import Settings from "./components/Settings.svelte";
   import Background from "./components/Background.svelte";
-  import { Settings as SettingsIcon, Sparkles, Sun, Moon } from "lucide-svelte";
+  import {
+    Settings as SettingsIcon,
+    Sparkles,
+    Sun,
+    Moon,
+    Github,
+  } from "lucide-svelte";
 
   let showSettings = $state(false);
   let t = $derived(translations[appState.settings.language]);
@@ -132,6 +138,31 @@
   >
     <Optimizer />
   </div>
+
+  <footer class="shrink-0 pb-4 md:pb-6">
+    <div
+      class="mx-auto w-fit text-center text-[12px] md:text-sm text-neutral-600 dark:text-neutral-300"
+    >
+      <a
+        href="https://www.micostar.cc"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+      >
+        <span>Betsy's Blog</span>
+      </a>
+      <div class="h-1"></div>
+      <a
+        href="https://github.com/Besty0728/Prompt-Assistance"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+      >
+        <Github class="size-4" />
+        <span>GitHub Project</span>
+      </a>
+    </div>
+  </footer>
 
   <!-- Settings Modal (Glass Overlay) -->
   {#if showSettings}
